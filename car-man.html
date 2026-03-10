@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAR-MAN</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Arial', sans-serif;
+    color: #fff;
+  }
+  #gameContainer {
+    position: relative;
+  }
+  canvas {
+    display: block;
+    border: 2px solid #1a1aff;
+    box-shadow: 0 0 20px #1a1aff, 0 0 40px #0000ff44;
+  }
+  #ui {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    padding: 8px 4px;
+    font-size: 18px;
+    letter-spacing: 2px;
+  }
+  #title {
+    font-size: 32px;
+    letter-spacing: 6px;
+    color: #FFD700;
+    text-shadow: 0 0 10px #FFD700;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  #message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 0 0 10px #FFD700;
+    text-align: center;
+    pointer-events: none;
+    letter-spacing: 3px;
+  }
+  #controls {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #888;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div id="title">CAR-MAN</div>
+<div id="gameContainer">
+  <div id="ui">
+    <span>SCORE: <span id="score">0</span></span>
+    <span>LIVES: <span id="lives">3</span></span>
+    <span>LEVEL: <span id="level">1</span></span>
+  </div>
+  <canvas id="canvas"></canvas>
+  <div id="message" style="display:none"></div>
+</div>
+<div id="controls">ARROW KEYS or WASD to drive &nbsp;|&nbsp; Collect all fuel dots &nbsp;|&nbsp; Power-ups let you run over pedestrians!</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const levelEl = document.getElementById('level');
+const msgEl = document.getElementById('message');
+
+const TILE = 20;
+const HALF = TILE / 2;
+const COLS = 28;
+const ROWS = 31;
+
+canvas.width = COLS * TILE;
+canvas.height = ROWS * TILE;
+
+// Maze layout: 0=dot, 1=wall, 2=empty, 3=power pellet, 4=ghost house door
+const MAZE_TEMPLATE = [
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+  [1,3,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,3,1],
+  [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+  [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+  [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,0,1,1,1,1,1,2,1,1,2,1,1,1,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,1,1,1,2,1,1,2,1,1,1,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,1,1,1,4,4,1,1,1,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,1,2,2,2,2,2,2,1,2,1,1,0,1,1,1,1,1,1],
+  [2,2,2,2,2,2,0,2,2,2,1,2,2,2,2,2,2,1,2,2,2,0,2,2,2,2,2,2],
+  [1,1,1,1,1,1,0,1,1,2,1,2,2,2,2,2,2,1,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,2,2,2,2,2,2,2,2,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1],
+  [1,1,1,1,1,1,0,1,1,2,1,1,1,1,1,1,1,1,2,1,1,0,1,1,1,1,1,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+  [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+  [1,3,0,0,1,1,0,0,0,0,0,0,0,2,2,0,0,0,0,0,0,0,1,1,0,0,3,1],
+  [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+  [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+  [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+  [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+  [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+  [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+// Deep copy maze
+function cloneMaze() {
+  return MAZE_TEMPLATE.map(r => [...r]);
+}
+
+// Count total dots+pellets
+function countDots(maze) {
+  let c = 0;
+  for (let r = 0; r < ROWS; r++)
+    for (let col = 0; col < COLS; col++)
+      if (maze[r][col] === 0 || maze[r][col] === 3) c++;
+  return c;
+}
+
+// Game state
+let maze, score, lives, level, totalDots, dotsEaten;
+let gameState = 'start'; // start, playing, dying, win, gameover
+let paused = false;
+
+// Car (player) — start at center of tile col 14, row 23
+const car = {
+  x: 14 * TILE + HALF,
+  y: 23 * TILE + HALF,
+  px: 14 * TILE + HALF,
+  py: 23 * TILE + HALF,
+  dir: { x: 0, y: 0 },
+  nextDir: { x: 0, y: 0 },
+  speed: 2,
+  powered: false,
+  powerTimer: 0,
+  animFrame: 0,
+  animTimer: 0,
+};
+
+// People (pedestrians / ghosts)
+const PERSON_COLORS = ['#FF0000','#FFB8FF','#00FFFF','#FFB852'];
+const PERSON_NAMES = ['Bob','Sue','Ted','Zoe'];
+
+let people = [];
+
+function initPeople() {
+  const starts = [
+    { x: 13.5, y: 14, scatter: { x: 2, y: 2 } },
+    { x: 11.5, y: 14, scatter: { x: 25, y: 2 } },
+    { x: 13.5, y: 16, scatter: { x: 2, y: 28 } },
+    { x: 15.5, y: 14, scatter: { x: 25, y: 28 } },
+  ];
+  people = starts.map((s, i) => ({
+    x: s.x * TILE,
+    y: s.y * TILE,
+    px: s.x * TILE,
+    py: s.y * TILE,
+    dir: { x: i % 2 === 0 ? -1 : 1, y: 0 },
+    speed: 1.8 + i * 0.05,
+    color: PERSON_COLORS[i],
+    name: PERSON_NAMES[i],
+    mode: 'house', // house, scatter, chase, frightened, eaten
+    modeTimer: 0,
+    houseTimer: i * 80,
+    scatterTarget: s.scatter,
+    animFrame: 0,
+    animTimer: 0,
+    eaten: false,
+  }));
+}
+
+// Input
+const keys = {};
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') car.nextDir = { x: 0, y: -1 };
+  if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') car.nextDir = { x: 0, y: 1 };
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') car.nextDir = { x: -1, y: 0 };
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') car.nextDir = { x: 1, y: 0 };
+  if ((e.key === 'Enter' || e.key === ' ') && gameState !== 'playing') startGame();
+});
+
+function tileWalkable(col, row, isGhost) {
+  if (col < 0 || col >= COLS) return true; // horizontal tunnel
+  if (row < 0 || row >= ROWS) return false;
+  const t = maze[row][col];
+  if (t === 1) return false;
+  if (!isGhost && t === 4) return false;
+  return true;
+}
+
+// Clean tile-center movement: entities snap to tile centers and turn only there
+function moveEntity(entity, isGhost) {
+  const speed = entity.speed;
+  const col = Math.floor(entity.x / TILE);
+  const row = Math.floor(entity.y / TILE);
+  const cx = col * TILE + HALF;
+  const cy = row * TILE + HALF;
+
+  // Within snapping distance of tile center
+  if (Math.abs(entity.x - cx) <= speed && Math.abs(entity.y - cy) <= speed) {
+    entity.x = cx;
+    entity.y = cy;
+
+    // Try queued direction first
+    const nd = entity.nextDir;
+    if ((nd.x !== 0 || nd.y !== 0) && tileWalkable(col + nd.x, row + nd.y, isGhost)) {
+      entity.dir = { ...nd };
+    }
+
+    // Stop if current direction is blocked
+    const d = entity.dir;
+    if ((d.x !== 0 || d.y !== 0) && !tileWalkable(col + d.x, row + d.y, isGhost)) {
+      entity.dir = { x: 0, y: 0 };
+    }
+  }
+
+  if (entity.dir.x === 0 && entity.dir.y === 0) return;
+
+  entity.x += entity.dir.x * speed;
+  entity.y += entity.dir.y * speed;
+
+  // Horizontal tunnel wrap
+  if (entity.x < 0) entity.x += COLS * TILE;
+  if (entity.x >= COLS * TILE) entity.x -= COLS * TILE;
+}
+
+// Ghost AI
+function getGhostTarget(person) {
+  if (person.mode === 'frightened') return null;
+  if (person.mode === 'scatter') return person.scatterTarget;
+  // Chase: aim at car
+  const cx = Math.round(car.x / TILE);
+  const cy = Math.round(car.y / TILE);
+  return { x: cx, y: cy };
+}
+
+function ghostAI(person) {
+  if (person.mode === 'house') {
+    person.houseTimer--;
+    if (person.houseTimer <= 0) {
+      // Exit to the tile just above the door
+      person.mode = 'scatter';
+      person.x = 14 * TILE + HALF;
+      person.y = 11 * TILE + HALF;
+      person.dir = { x: 0, y: -1 };
+    } else {
+      // Bounce vertically inside house
+      person.y += person.dir.y * person.speed;
+      if (person.y < 13 * TILE + HALF) { person.dir.y = 1; }
+      if (person.y > 15 * TILE + HALF) { person.dir.y = -1; }
+    }
+    return;
+  }
+
+  person.modeTimer++;
+  if (person.mode !== 'frightened' && person.mode !== 'eaten') {
+    if (person.modeTimer < 200) person.mode = 'scatter';
+    else if (person.modeTimer < 600) person.mode = 'chase';
+    else if (person.modeTimer < 800) person.mode = 'scatter';
+    else person.mode = 'chase';
+  }
+
+  const spd = person.mode === 'frightened' ? person.speed * 0.6
+             : person.mode === 'eaten' ? person.speed * 2
+             : person.speed;
+
+  const col = Math.floor(person.x / TILE);
+  const row = Math.floor(person.y / TILE);
+  const cx = col * TILE + HALF;
+  const cy = row * TILE + HALF;
+
+  // At tile center: pick best direction
+  if (Math.abs(person.x - cx) <= spd && Math.abs(person.y - cy) <= spd) {
+    person.x = cx;
+    person.y = cy;
+
+    const allDirs = [{ x:0,y:-1 },{ x:0,y:1 },{ x:-1,y:0 },{ x:1,y:0 }];
+    // No reversing unless eaten (returning to house)
+    const dirs = allDirs.filter(d => !(d.x === -person.dir.x && d.y === -person.dir.y) || person.mode === 'eaten');
+    const valid = dirs.filter(d => tileWalkable(col + d.x, row + d.y, true));
+
+    if (valid.length === 0) { person.dir = { x: 0, y: 0 }; return; }
+
+    if (person.mode === 'frightened') {
+      person.dir = valid[Math.floor(Math.random() * valid.length)];
+    } else {
+      const target = getGhostTarget(person);
+      if (!target) { person.dir = valid[0]; return; }
+      let best = null, bestDist = Infinity;
+      for (const d of valid) {
+        const dist = (col + d.x - target.x) ** 2 + (row + d.y - target.y) ** 2;
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      }
+      if (best) person.dir = best;
+    }
+  }
+
+  person.x += person.dir.x * spd;
+  person.y += person.dir.y * spd;
+  if (person.x < 0) person.x += COLS * TILE;
+  if (person.x >= COLS * TILE) person.x -= COLS * TILE;
+}
+
+// Collision
+function checkCollisions() {
+  for (const person of people) {
+    if (person.mode === 'house' || person.mode === 'eaten') continue;
+    const dx = car.x - person.x;
+    const dy = car.y - person.y;
+    if (Math.sqrt(dx*dx + dy*dy) < TILE * 0.8) {
+      if (person.mode === 'frightened') {
+        person.mode = 'eaten';
+        person.modeTimer = 0;
+        score += 200;
+        updateUI();
+        // Return to house after a bit
+        setTimeout(() => {
+          person.mode = 'scatter';
+          person.x = 13.5 * TILE;
+          person.y = 14 * TILE;
+          person.modeTimer = 0;
+        }, 3000);
+      } else {
+        // Car hit by person
+        loseLife();
+        return;
+      }
+    }
+  }
+}
+
+let deathTimer = 0;
+
+function loseLife() {
+  lives--;
+  updateUI();
+  gameState = 'dying';
+  deathTimer = 120;
+  showMessage('BUSTED! 🚔');
+  car.dir = { x: 0, y: 0 };
+  car.nextDir = { x: 0, y: 0 };
+}
+
+function resetPositions() {
+  car.x = 14 * TILE + HALF;
+  car.y = 23 * TILE + HALF;
+  car.dir = { x: 0, y: 0 };
+  car.nextDir = { x: 0, y: 0 };
+  car.powered = false;
+  car.powerTimer = 0;
+  initPeople();
+}
+
+function startGame() {
+  maze = cloneMaze();
+  score = 0;
+  lives = 3;
+  level = 1;
+  totalDots = countDots(maze);
+  dotsEaten = 0;
+  updateUI();
+  resetPositions();
+  gameState = 'playing';
+  hideMessage();
+}
+
+function nextLevel() {
+  level++;
+  maze = cloneMaze();
+  totalDots = countDots(maze);
+  dotsEaten = 0;
+  updateUI();
+  resetPositions();
+  gameState = 'playing';
+  hideMessage();
+}
+
+function updateUI() {
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+  levelEl.textContent = level;
+}
+
+function showMessage(txt) {
+  msgEl.textContent = txt;
+  msgEl.style.display = 'block';
+}
+
+function hideMessage() {
+  msgEl.style.display = 'none';
+}
+
+// Drawing helpers
+// Pre-compute which wall tiles have lit windows (stable, no per-frame random)
+const litWindows = new Set();
+for (let r = 0; r < ROWS; r++)
+  for (let c = 0; c < COLS; c++)
+    if (Math.random() < 0.3) litWindows.add(`${c},${r}`);
+
+function drawWall(x, y) {
+  ctx.fillStyle = '#1a1aff';
+  ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+  ctx.strokeStyle = '#3333ff';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
+  ctx.fillStyle = '#000088';
+  ctx.fillRect(x * TILE + 4, y * TILE + 4, TILE - 8, TILE - 8);
+  ctx.fillStyle = litWindows.has(`${x},${y}`) ? '#ffff88' : '#0000aa';
+  ctx.fillRect(x * TILE + 5, y * TILE + 5, TILE - 10, TILE - 10);
+}
+
+function drawDot(cx, cy) {
+  ctx.fillStyle = '#ffcc44';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPellet(cx, cy, t) {
+  const pulse = 0.7 + 0.3 * Math.sin(t * 0.08);
+  ctx.fillStyle = '#ff4400';
+  ctx.shadowColor = '#ff4400';
+  ctx.shadowBlur = 8 * pulse;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5 * pulse, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+}
+
+function drawCar(x, y, dir, powered, frame) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Rotate based on direction
+  let angle = 0;
+  if (dir.x === 1) angle = 0;
+  else if (dir.x === -1) angle = Math.PI;
+  else if (dir.y === 1) angle = Math.PI / 2;
+  else if (dir.y === -1) angle = -Math.PI / 2;
+  ctx.rotate(angle);
+
+  const w = 14, h = 9;
+
+  // Body
+  ctx.fillStyle = powered ? '#ff0' : '#e63';
+  ctx.beginPath();
+  ctx.roundRect(-w/2, -h/2, w, h, 3);
+  ctx.fill();
+
+  // Windshield
+  ctx.fillStyle = '#aef';
+  ctx.beginPath();
+  ctx.roundRect(-w/2 + 5, -h/2 + 1, 5, h - 2, 1);
+  ctx.fill();
+
+  // Wheels
+  ctx.fillStyle = '#222';
+  [-3, 3].forEach(wy => {
+    [-w/2 + 1, w/2 - 3].forEach(wx => {
+      ctx.beginPath();
+      ctx.ellipse(wx + 1, wy, 2, 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  });
+
+  // Headlights
+  ctx.fillStyle = '#ffe';
+  ctx.beginPath();
+  ctx.arc(w/2 - 1, -3, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(w/2 - 1, 3, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Speed lines if moving
+  if ((dir.x !== 0 || dir.y !== 0) && frame % 4 < 2) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    for (let i = -1; i <= 1; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-w/2, i * 3);
+      ctx.lineTo(-w/2 - 4 - (frame % 3), i * 3);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawPerson(x, y, color, mode, frame) {
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (mode === 'frightened') {
+    // Running away - blue person
+    ctx.strokeStyle = '#4488ff';
+    ctx.fillStyle = '#2255cc';
+    ctx.lineWidth = 2;
+    // Scared face
+    const bob = Math.sin(frame * 0.3) * 1.5;
+    // Body
+    ctx.beginPath();
+    ctx.arc(0, -5 + bob, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Scared eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-1.5, -5.5 + bob, 1, 0, Math.PI * 2);
+    ctx.arc(1.5, -5.5 + bob, 1, 0, Math.PI * 2);
+    ctx.fill();
+    // Wavy mouth
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-2, -3.5 + bob);
+    ctx.quadraticCurveTo(0, -2 + bob + Math.sin(frame * 0.5), 2, -3.5 + bob);
+    ctx.stroke();
+    // Torso
+    ctx.strokeStyle = '#4488ff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -1 + bob);
+    ctx.lineTo(0, 4);
+    ctx.stroke();
+    // Arms flailing
+    ctx.beginPath();
+    ctx.moveTo(-4, 0 + bob);
+    ctx.lineTo(0, 1 + bob);
+    ctx.lineTo(4, -1 + bob);
+    ctx.stroke();
+    // Legs running
+    ctx.beginPath();
+    ctx.moveTo(0, 4);
+    ctx.lineTo(-2 + Math.sin(frame * 0.5) * 2, 8);
+    ctx.moveTo(0, 4);
+    ctx.lineTo(2 - Math.sin(frame * 0.5) * 2, 8);
+    ctx.stroke();
+  } else if (mode === 'eaten') {
+    // Ghost of the person - faded
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, -5, 4, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  } else {
+    // Normal pedestrian
+    const bob = Math.sin(frame * 0.15) * 1.5;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(1, 9, 4, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Legs walking
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 4 + bob);
+    ctx.lineTo(-2 + Math.sin(frame * 0.2) * 2.5, 9);
+    ctx.moveTo(0, 4 + bob);
+    ctx.lineTo(2 - Math.sin(frame * 0.2) * 2.5, 9);
+    ctx.stroke();
+    // Torso
+    ctx.beginPath();
+    ctx.moveTo(0, -1 + bob);
+    ctx.lineTo(0, 4 + bob);
+    ctx.stroke();
+    // Arms swinging
+    ctx.beginPath();
+    ctx.moveTo(-4, 1 + bob + Math.sin(frame * 0.2) * 2);
+    ctx.lineTo(0, 1 + bob);
+    ctx.lineTo(4, 1 + bob - Math.sin(frame * 0.2) * 2);
+    ctx.stroke();
+    // Head
+    ctx.fillStyle = '#FDBCB4';
+    ctx.beginPath();
+    ctx.arc(0, -5 + bob, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(-1.5, -5.5 + bob, 0.8, 0, Math.PI * 2);
+    ctx.arc(1.5, -5.5 + bob, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    // Hair color = person color
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, -8 + bob, 3, Math.PI, 0);
+    ctx.fill();
+    // Shirt
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(-3, -1 + bob, 6, 4, 1);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// Road markings
+function drawRoad(x, y) {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+}
+
+let tick = 0;
+
+function update() {
+  if (gameState !== 'playing') {
+    if (gameState === 'dying') {
+      deathTimer--;
+      if (deathTimer <= 0) {
+        if (lives <= 0) {
+          gameState = 'gameover';
+          showMessage('GAME OVER\nPress ENTER');
+        } else {
+          resetPositions();
+          gameState = 'playing';
+          hideMessage();
+        }
+      }
+    }
+    return;
+  }
+
+  tick++;
+
+  // Animate
+  car.animTimer++;
+  if (car.animTimer > 4) { car.animTimer = 0; car.animFrame++; }
+
+  // Move car
+  moveEntity(car, false);
+
+  // Eat dots — check tile the car center is in
+  const col = Math.floor(car.x / TILE);
+  const row = Math.floor(car.y / TILE);
+  if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+    const cell = maze[row][col];
+    if (cell === 0) {
+      maze[row][col] = 2;
+      score += 10;
+      dotsEaten++;
+      updateUI();
+    } else if (cell === 3) {
+      maze[row][col] = 2;
+      score += 50;
+      dotsEaten++;
+      car.powered = true;
+      car.powerTimer = 300;
+      people.forEach(p => {
+        if (p.mode !== 'house' && p.mode !== 'eaten') {
+          p.mode = 'frightened';
+          p.modeTimer = 0;
+        }
+      });
+      updateUI();
+    }
+  }
+
+  // Power timer
+  if (car.powered) {
+    car.powerTimer--;
+    if (car.powerTimer <= 0) {
+      car.powered = false;
+      people.forEach(p => { if (p.mode === 'frightened') { p.mode = 'chase'; } });
+    }
+  }
+
+  // Move people
+  people.forEach(p => {
+    p.animTimer++;
+    if (p.animTimer > 6) { p.animTimer = 0; p.animFrame++; }
+    ghostAI(p);
+  });
+
+  // Collisions
+  checkCollisions();
+
+  // Win condition
+  if (dotsEaten >= totalDots) {
+    gameState = 'win';
+    showMessage('LEVEL UP!\nPress ENTER');
+    setTimeout(() => {
+      if (gameState === 'win') nextLevel();
+    }, 2000);
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw maze
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = maze[r][c];
+      const cx = c * TILE + TILE / 2;
+      const cy = r * TILE + TILE / 2;
+      if (cell === 1) {
+        drawWall(c, r);
+      } else if (cell === 4) {
+        // Ghost door
+        ctx.fillStyle = '#111';
+        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+        ctx.strokeStyle = '#FFB8FF';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(c * TILE, r * TILE + TILE / 2);
+        ctx.lineTo(c * TILE + TILE, r * TILE + TILE / 2);
+        ctx.stroke();
+      } else {
+        // Road markings
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+        // Draw dot/pellet
+        if (cell === 0) drawDot(cx, cy);
+        else if (cell === 3) drawPellet(cx, cy, tick);
+      }
+    }
+  }
+
+  // Road lane lines (subtle)
+  ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 8]);
+  for (let r = 0; r < ROWS; r++) {
+    ctx.beginPath();
+    ctx.moveTo(0, r * TILE + TILE/2);
+    ctx.lineTo(canvas.width, r * TILE + TILE/2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Draw people
+  for (const person of people) {
+    if (person.mode !== 'house') {
+      drawPerson(person.x, person.y, person.color, person.mode, person.animFrame);
+    }
+  }
+
+  // Draw car
+  drawCar(car.x, car.y, car.dir, car.powered, car.animFrame);
+
+  // Power mode flash warning
+  if (car.powered && car.powerTimer < 80 && Math.floor(car.powerTimer / 10) % 2 === 0) {
+    ctx.fillStyle = 'rgba(255,0,0,0.08)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Start screen overlay
+  if (gameState === 'start') {
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 15;
+    ctx.fillText('CAR-MAN', canvas.width/2, canvas.height/2 - 50);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px Arial';
+    ctx.fillText('Collect all fuel dots!', canvas.width/2, canvas.height/2 - 10);
+    ctx.fillText('Avoid the pedestrians!', canvas.width/2, canvas.height/2 + 15);
+    ctx.fillStyle = '#ff4';
+    ctx.fillText('Red power-ups = run them over!', canvas.width/2, canvas.height/2 + 40);
+    ctx.fillStyle = '#aaa';
+    ctx.font = 'bold 18px Arial';
+    ctx.fillText('Press ENTER or SPACE to start', canvas.width/2, canvas.height/2 + 80);
+    ctx.textAlign = 'left';
+  }
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// Init
+maze = cloneMaze();
+totalDots = countDots(maze);
+dotsEaten = 0;
+score = 0; lives = 3; level = 1;
+updateUI();
+initPeople();
+gameLoop();
+showMessage('');
+</script>
+</body>
+</html>
