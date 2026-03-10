@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pop the Lock</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d0d1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = 480;
+canvas.height = 640;
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const CX = canvas.width / 2;
+const CY = canvas.height / 2;
+const R  = 130;          // lock ring radius
+const ARM_LEN   = R - 18;
+const DOT_R     = 10;
+const TARGET_ARC = 0.22; // radians (size of target zone)
+
+// ─── Colour palettes per level band ──────────────────────────────────────────
+const PALETTES = [
+  { bg: '#0d0d1a', ring: '#1e2a4a', arm: '#4fc3f7', target: '#00e676', glow: '#00e676' },
+  { bg: '#120a1e', ring: '#2a1a3a', arm: '#ce93d8', target: '#ff4081', glow: '#ff4081' },
+  { bg: '#1a0a0a', ring: '#3a1a1a', arm: '#ff8a65', target: '#ffeb3b', glow: '#ffeb3b' },
+  { bg: '#0a1a0a', ring: '#1a3a1a', arm: '#a5d6a7', target: '#40c4ff', glow: '#40c4ff' },
+  { bg: '#1a1a0a', ring: '#3a3a0a', arm: '#fff176', target: '#ff6e40', glow: '#ff6e40' },
+];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+const STATE = { IDLE: 0, PLAYING: 1, SUCCESS: 2, FAIL: 3 };
+let state      = STATE.IDLE;
+let score      = 0;
+let best       = 0;
+let level      = 0;
+
+// arm
+let armAngle   = 0;
+let armSpeed   = 0.032;
+let armDir     = 1;
+
+// target
+let targetAngle = Math.PI / 2; // top of circle
+
+// flash / shake
+let flashAlpha  = 0;
+let shakeX      = 0;
+let shakeMag    = 0;
+
+// particles
+let particles   = [];
+
+// tick counter
+let tick        = 0;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function palette() { return PALETTES[level % PALETTES.length]; }
+
+function normalizeAngle(a) {
+  a = a % (Math.PI * 2);
+  if (a < 0) a += Math.PI * 2;
+  return a;
+}
+
+function angleDiff(a, b) {
+  let d = normalizeAngle(b - a);
+  if (d > Math.PI) d -= Math.PI * 2;
+  return Math.abs(d);
+}
+
+function randomTargetAngle(currentArm) {
+  // place target at least 90° ahead of arm in travel direction
+  const offset = (Math.PI / 2) + Math.random() * Math.PI;
+  return normalizeAngle(currentArm + armDir * offset);
+}
+
+function reset(keepScore) {
+  if (!keepScore) { score = 0; level = 0; }
+  armAngle    = 0;
+  armDir      = Math.random() < 0.5 ? 1 : -1;
+  armSpeed    = 0.032 + level * 0.004;
+  targetAngle = randomTargetAngle(armAngle);
+  particles   = [];
+  flashAlpha  = 0;
+  shakeMag    = 0;
+}
+
+// ─── Input ───────────────────────────────────────────────────────────────────
+function handleInput() {
+  if (state === STATE.IDLE || state === STATE.FAIL) {
+    reset(false);
+    state = STATE.PLAYING;
+    return;
+  }
+  if (state === STATE.SUCCESS) return; // wait for animation
+  if (state !== STATE.PLAYING) return;
+
+  const diff = angleDiff(armAngle, targetAngle);
+  if (diff < TARGET_ARC / 2 + 0.04) {
+    // HIT
+    score++;
+    level = Math.floor(score / 5);
+    if (score > best) best = score;
+    spawnParticles(true);
+    flashAlpha = 0.5;
+    state = STATE.SUCCESS;
+    setTimeout(() => {
+      if (state === STATE.SUCCESS) {
+        armDir      = Math.random() < 0.5 ? 1 : -1;
+        armSpeed    = 0.032 + level * 0.004;
+        targetAngle = randomTargetAngle(armAngle);
+        state       = STATE.PLAYING;
+      }
+    }, 380);
+  } else {
+    // MISS
+    spawnParticles(false);
+    shakeMag = 12;
+    flashAlpha = 0.6;
+    if (score > best) best = score;
+    state = STATE.FAIL;
+  }
+}
+
+document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); handleInput(); }});
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInput(); }, { passive: false });
+
+// ─── Particles ───────────────────────────────────────────────────────────────
+function spawnParticles(success) {
+  const count = success ? 18 : 12;
+  const px = CX + Math.cos(targetAngle) * R;
+  const py = CY + Math.sin(targetAngle) * R;
+  const pal = palette();
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * 4;
+    particles.push({
+      x: px, y: py,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.025 + Math.random() * 0.02,
+      r: 3 + Math.random() * 4,
+      color: success ? pal.glow : '#ff1744',
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.life -= p.decay;
+    p.r *= 0.96;
+    ctx.beginPath();
+    ctx.arc(p.x + shakeX, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2, '0');
+    ctx.fill();
+  });
+}
+
+// ─── Draw functions ───────────────────────────────────────────────────────────
+function drawBackground() {
+  const pal = palette();
+  ctx.fillStyle = pal.bg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // subtle radial glow behind lock
+  const rg = ctx.createRadialGradient(CX + shakeX, CY, 0, CX + shakeX, CY, 220);
+  rg.addColorStop(0, pal.ring + '44');
+  rg.addColorStop(1, 'transparent');
+  ctx.fillStyle = rg;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawRing() {
+  const pal = palette();
+  const cx = CX + shakeX;
+
+  // outer glow
+  ctx.beginPath();
+  ctx.arc(cx, CY, R + 6, 0, Math.PI * 2);
+  ctx.strokeStyle = pal.ring;
+  ctx.lineWidth = 22;
+  ctx.stroke();
+
+  // main ring
+  ctx.beginPath();
+  ctx.arc(cx, CY, R, 0, Math.PI * 2);
+  ctx.strokeStyle = pal.ring;
+  ctx.lineWidth = 14;
+  ctx.stroke();
+
+  // inner highlight
+  ctx.beginPath();
+  ctx.arc(cx, CY, R, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+}
+
+function drawTarget() {
+  const pal = palette();
+  const cx = CX + shakeX;
+  const start = targetAngle - TARGET_ARC / 2;
+  const end   = targetAngle + TARGET_ARC / 2;
+
+  // glow layer
+  ctx.save();
+  ctx.shadowColor = pal.glow;
+  ctx.shadowBlur  = 22;
+  ctx.beginPath();
+  ctx.arc(cx, CY, R, start, end);
+  ctx.strokeStyle = pal.target;
+  ctx.lineWidth = 14;
+  ctx.stroke();
+  ctx.restore();
+
+  // bright center arc
+  ctx.beginPath();
+  ctx.arc(cx, CY, R, start, end);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // dot at center of target
+  const tx = cx + Math.cos(targetAngle) * R;
+  const ty = CY + Math.sin(targetAngle) * R;
+  ctx.beginPath();
+  ctx.arc(tx, ty, 6, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+}
+
+function drawArm() {
+  const pal = palette();
+  const cx = CX + shakeX;
+  const ex = cx + Math.cos(armAngle) * ARM_LEN;
+  const ey = CY + Math.sin(armAngle) * ARM_LEN;
+
+  // arm line glow
+  ctx.save();
+  ctx.shadowColor = pal.arm;
+  ctx.shadowBlur  = 16;
+  ctx.beginPath();
+  ctx.moveTo(cx, CY);
+  ctx.lineTo(ex, ey);
+  ctx.strokeStyle = pal.arm;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // dot at tip
+  ctx.beginPath();
+  ctx.arc(ex, ey, DOT_R, 0, Math.PI * 2);
+  ctx.fillStyle = pal.arm;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(ex, ey, DOT_R - 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.restore();
+
+  // center pivot
+  ctx.beginPath();
+  ctx.arc(cx, CY, 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, CY, 4, 0, Math.PI * 2);
+  ctx.fillStyle = pal.arm;
+  ctx.fill();
+}
+
+function drawLockBody() {
+  const cx = CX + shakeX;
+  const pal = palette();
+
+  // shackle (top arch)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, CY - 30, 38, Math.PI, 0);
+  ctx.strokeStyle = pal.ring;
+  ctx.lineWidth = 14;
+  ctx.stroke();
+  ctx.restore();
+
+  // lock body (rounded rect)
+  ctx.save();
+  ctx.fillStyle = pal.ring;
+  ctx.beginPath();
+  ctx.roundRect(cx - 46, CY - 10, 92, 72, 14);
+  ctx.fill();
+
+  // keyhole
+  ctx.beginPath();
+  ctx.arc(cx, CY + 28, 11, 0, Math.PI * 2);
+  ctx.fillStyle = pal.bg;
+  ctx.fill();
+  ctx.fillRect(cx - 5, CY + 28, 10, 18);
+  ctx.restore();
+}
+
+function drawHUD() {
+  // score
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 64px Segoe UI';
+  ctx.shadowColor = palette().glow;
+  ctx.shadowBlur = 20;
+  ctx.fillText(score, CX, 100);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '18px Segoe UI';
+  ctx.fillText(`Best  ${best}`, CX, 130);
+
+  // level badge
+  if (state === STATE.PLAYING || state === STATE.SUCCESS) {
+    ctx.fillStyle = palette().target + 'cc';
+    ctx.font = 'bold 14px Segoe UI';
+    ctx.fillText(`LVL ${level + 1}`, CX, 158);
+  }
+  ctx.restore();
+}
+
+function drawIdle() {
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  // card
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath();
+  ctx.roundRect(CX - 160, CY + 140, 320, 130, 18);
+  ctx.fill();
+
+  ctx.fillStyle = palette().glow;
+  ctx.font = 'bold 38px Segoe UI';
+  ctx.shadowColor = palette().glow;
+  ctx.shadowBlur = 18;
+  ctx.fillText('POP THE LOCK', CX, CY + 185);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '17px Segoe UI';
+  ctx.fillText('Tap / SPACE when the arm hits the zone', CX, CY + 220);
+
+  pulseBtn(CX, CY + 248, 'TAP TO START');
+  ctx.restore();
+}
+
+function drawFail() {
+  ctx.save();
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = 'rgba(0,0,0,0.65)';
+  ctx.beginPath();
+  ctx.roundRect(CX - 150, CY + 130, 300, 150, 18);
+  ctx.fill();
+
+  ctx.fillStyle = '#ff1744';
+  ctx.font = 'bold 36px Segoe UI';
+  ctx.shadowColor = '#ff1744';
+  ctx.shadowBlur = 16;
+  ctx.fillText('LOCKED OUT!', CX, CY + 172);
+  ctx.shadowBlur = 0;
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px Segoe UI';
+  ctx.fillText(`Score: ${score}`, CX, CY + 208);
+
+  ctx.fillStyle = '#ffeb3b';
+  ctx.font = '17px Segoe UI';
+  ctx.fillText(`Best: ${best}`, CX, CY + 234);
+
+  pulseBtn(CX, CY + 262, 'TRY AGAIN');
+  ctx.restore();
+}
+
+let _pulse = 0;
+function pulseBtn(x, y, label) {
+  _pulse += 0.04;
+  const s = 1 + 0.04 * Math.sin(_pulse);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  const bw = 200, bh = 42;
+  const g = ctx.createLinearGradient(-bw/2, 0, bw/2, 0);
+  g.addColorStop(0, palette().glow + 'cc');
+  g.addColorStop(1, palette().arm  + 'cc');
+  ctx.fillStyle = g;
+  ctx.shadowColor = palette().glow;
+  ctx.shadowBlur  = 14;
+  ctx.beginPath();
+  ctx.roundRect(-bw/2, -bh/2, bw, bh, 21);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 16px Segoe UI';
+  ctx.fillText(label, 0, 6);
+  ctx.restore();
+}
+
+// ─── Flash overlay ────────────────────────────────────────────────────────────
+function drawFlash() {
+  if (flashAlpha <= 0) return;
+  const color = state === STATE.FAIL ? `rgba(255,23,68,${flashAlpha})` : `rgba(${state===STATE.SUCCESS ? '0,230,118' : '255,255,255'},${flashAlpha})`;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  flashAlpha = Math.max(0, flashAlpha - 0.035);
+}
+
+// ─── Speed indicator arc ──────────────────────────────────────────────────────
+function drawSpeedBar() {
+  if (state !== STATE.PLAYING && state !== STATE.SUCCESS) return;
+  const maxSpeed = 0.032 + 20 * 0.004;
+  const pct = Math.min((armSpeed - 0.032) / (maxSpeed - 0.032), 1);
+  const barW = 160, barH = 6;
+  const bx = CX - barW / 2;
+  const by = CY + R + 55;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.1)';
+  ctx.beginPath();
+  ctx.roundRect(bx, by, barW, barH, 3);
+  ctx.fill();
+
+  const g = ctx.createLinearGradient(bx, 0, bx + barW, 0);
+  g.addColorStop(0, palette().target);
+  g.addColorStop(1, '#ff1744');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, barW * pct, barH, 3);
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '11px Segoe UI';
+  ctx.textAlign = 'center';
+  ctx.fillText('SPEED', CX, by + 20);
+}
+
+// ─── Main loop ────────────────────────────────────────────────────────────────
+function loop() {
+  tick++;
+
+  // shake decay
+  if (shakeMag > 0) {
+    shakeX = (Math.random() - 0.5) * shakeMag;
+    shakeMag *= 0.82;
+    if (shakeMag < 0.5) { shakeMag = 0; shakeX = 0; }
+  }
+
+  drawBackground();
+
+  // Draw ring system
+  drawRing();
+  drawTarget();
+  drawLockBody();
+
+  if (state === STATE.PLAYING || state === STATE.SUCCESS) {
+    armAngle = normalizeAngle(armAngle + armSpeed * armDir);
+  }
+
+  drawArm();
+  updateParticles();
+  drawHUD();
+  drawSpeedBar();
+  drawFlash();
+
+  if (state === STATE.IDLE) drawIdle();
+  if (state === STATE.FAIL) drawFail();
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
