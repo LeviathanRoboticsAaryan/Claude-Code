@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Burger</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      user-select: none;
+    }
+    h1 {
+      color: #f5a623;
+      font-size: 2.2rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 8px rgba(245,166,35,0.5);
+      letter-spacing: 2px;
+    }
+    canvas {
+      border: 3px solid #f5a623;
+      border-radius: 8px;
+      box-shadow: 0 0 30px rgba(245,166,35,0.3);
+      display: block;
+    }
+    #instructions {
+      color: #aaa;
+      margin-top: 10px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🍔 Flappy Burger 🍔</h1>
+  <canvas id="game" width="400" height="600"></canvas>
+  <p id="instructions">Press Space / Tap to flap</p>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // ─── Constants ────────────────────────────────────────────
+    const W = canvas.width;
+    const H = canvas.height;
+    const GRAVITY   = 0.45;
+    const FLAP      = -8.5;
+    const PIPE_W    = 60;
+    const PIPE_GAP  = 155;
+    const PIPE_SPEED = 2.8;
+    const PIPE_INTERVAL = 90; // frames
+
+    // ─── State ────────────────────────────────────────────────
+    let burger, pipes, score, bestScore, frame, state;
+    // states: 'idle' | 'playing' | 'dead'
+
+    function init() {
+      burger = { x: 100, y: H / 2, vy: 0, r: 26 };
+      pipes  = [];
+      score  = 0;
+      frame  = 0;
+      state  = 'idle';
+    }
+
+    // ─── Drawing helpers ─────────────────────────────────────
+
+    function drawBackground() {
+      // Sky gradient
+      const sky = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+      sky.addColorStop(0, '#87CEEB');
+      sky.addColorStop(1, '#d4f1f9');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, H * 0.8);
+
+      // Ground
+      const gnd = ctx.createLinearGradient(0, H * 0.8, 0, H);
+      gnd.addColorStop(0, '#5d8a3c');
+      gnd.addColorStop(0.15, '#4a7a2e');
+      gnd.addColorStop(1, '#3a5e22');
+      ctx.fillStyle = gnd;
+      ctx.fillRect(0, H * 0.8, W, H * 0.2);
+
+      // Grass line
+      ctx.fillStyle = '#7bc142';
+      ctx.fillRect(0, H * 0.8, W, 8);
+
+      // Clouds (static decorative)
+      drawCloud(60,  70, 0.9);
+      drawCloud(220, 45, 1.1);
+      drawCloud(330, 80, 0.8);
+    }
+
+    function drawCloud(x, y, scale) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.arc(0,  0, 22, 0, Math.PI * 2);
+      ctx.arc(28, -6, 26, 0, Math.PI * 2);
+      ctx.arc(55,  0, 20, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawPipe(pipe) {
+      const rx = 6; // corner radius
+
+      // Color palette
+      const pipeGrad = ctx.createLinearGradient(pipe.x, 0, pipe.x + PIPE_W, 0);
+      pipeGrad.addColorStop(0,   '#3a7d1e');
+      pipeGrad.addColorStop(0.4, '#5cb827');
+      pipeGrad.addColorStop(1,   '#2e6018');
+
+      // Top pipe body
+      roundRect(pipe.x, 0, PIPE_W, pipe.top, rx, pipeGrad);
+      // Top pipe cap
+      const capH = 18, capExtra = 6;
+      roundRect(pipe.x - capExtra, pipe.top - capH, PIPE_W + capExtra * 2, capH, rx, '#4aa01a');
+
+      // Bottom pipe body
+      const botY = pipe.top + PIPE_GAP;
+      roundRect(pipe.x, botY, PIPE_W, H - botY, rx, pipeGrad);
+      // Bottom pipe cap
+      roundRect(pipe.x - capExtra, botY, PIPE_W + capExtra * 2, capH, rx, '#4aa01a');
+
+      // Shine
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(pipe.x + 8, 0, 10, pipe.top);
+      ctx.fillRect(pipe.x + 8, botY, 10, H - botY);
+    }
+
+    function roundRect(x, y, w, h, r, fill) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+
+    function drawBurger(x, y, angle) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+
+      const r = burger.r;
+      const bw = r * 2;    // total width
+      const bh = r * 1.6;  // total height
+
+      // ── Bottom bun ──
+      ctx.fillStyle = '#c8860a';
+      ctx.beginPath();
+      ctx.ellipse(0, bh * 0.35, bw * 0.52, bh * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // sesame on bottom bun
+      drawSesame(0, bh * 0.35, bw * 0.52);
+
+      // ── Lettuce frills ──
+      ctx.fillStyle = '#4db33d';
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.ellipse(i * bw * 0.14, bh * 0.18, bw * 0.12, bh * 0.09, i * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ── Tomato ──
+      ctx.fillStyle = '#e83030';
+      ctx.beginPath();
+      ctx.ellipse(0, bh * 0.10, bw * 0.46, bh * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── Cheese ──
+      ctx.fillStyle = '#f5c518';
+      ctx.beginPath();
+      ctx.ellipse(0, bh * 0.02, bw * 0.5, bh * 0.08, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── Patty ──
+      ctx.fillStyle = '#7b3f00';
+      ctx.beginPath();
+      ctx.ellipse(0, -bh * 0.08, bw * 0.48, bh * 0.10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#5a2d00';
+      ctx.beginPath();
+      ctx.ellipse(0, -bh * 0.08, bw * 0.44, bh * 0.075, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── Top bun ──
+      ctx.fillStyle = '#e8a020';
+      ctx.beginPath();
+      ctx.ellipse(0, -bh * 0.28, bw * 0.50, bh * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Shine on top bun
+      ctx.fillStyle = 'rgba(255,220,100,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(-bw * 0.12, -bh * 0.38, bw * 0.18, bh * 0.08, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Sesame seeds on top bun
+      drawSesame(0, -bh * 0.28, bw * 0.50);
+
+      ctx.restore();
+    }
+
+    function drawSesame(cx, cy, rx) {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      const seeds = [[-rx*0.3, cy-4], [rx*0.15, cy-6], [-rx*0.05, cy+1], [rx*0.35, cy], [-rx*0.45, cy+2]];
+      for (const [sx, sy] of seeds) {
+        ctx.beginPath();
+        ctx.ellipse(cx + sx, sy, 3, 1.8, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawScore() {
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'white';
+      ctx.strokeStyle = '#333';
+      ctx.lineWidth = 4;
+      ctx.font = 'bold 40px Segoe UI';
+      ctx.strokeText(score, W / 2, 60);
+      ctx.fillText(score, W / 2, 60);
+    }
+
+    function drawOverlay(title, sub1, sub2) {
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Panel
+      const pw = 300, ph = 220, px = (W - pw) / 2, py = (H - ph) / 2 - 20;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      roundRect(px, py, pw, ph, 18, 'rgba(255,255,255,0.12)');
+      ctx.strokeStyle = '#f5a623';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#f5a623';
+      ctx.font = 'bold 36px Segoe UI';
+      ctx.fillText(title, W / 2, py + 60);
+
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Segoe UI';
+      ctx.fillText(sub1, W / 2, py + 110);
+      ctx.fillStyle = '#ccc';
+      ctx.font = '16px Segoe UI';
+      ctx.fillText(sub2, W / 2, py + 148);
+
+      ctx.fillStyle = '#f5a623';
+      ctx.font = '14px Segoe UI';
+      ctx.fillText('Press Space or Tap to start', W / 2, py + 188);
+    }
+
+    // ─── Collision ───────────────────────────────────────────
+
+    function collides(pipe) {
+      const bx = burger.x, by = burger.y, br = burger.r * 0.78;
+      // Ground / ceiling
+      if (by + br >= H * 0.8 || by - br <= 0) return true;
+      // Pipe bounds
+      if (bx + br < pipe.x || bx - br > pipe.x + PIPE_W) return false;
+      if (by - br < pipe.top || by + br > pipe.top + PIPE_GAP) return true;
+      return false;
+    }
+
+    // ─── Game loop ───────────────────────────────────────────
+
+    function spawnPipe() {
+      const minTop = 60, maxTop = H * 0.8 - PIPE_GAP - 60;
+      const top = Math.random() * (maxTop - minTop) + minTop;
+      pipes.push({ x: W + 20, top, scored: false });
+    }
+
+    function update() {
+      if (state !== 'playing') return;
+      frame++;
+
+      // Burger physics
+      burger.vy += GRAVITY;
+      burger.y  += burger.vy;
+
+      // Spawn pipes
+      if (frame % PIPE_INTERVAL === 0) spawnPipe();
+
+      // Move pipes & score
+      for (const p of pipes) {
+        p.x -= PIPE_SPEED;
+        if (!p.scored && p.x + PIPE_W < burger.x) {
+          p.scored = true;
+          score++;
+        }
+      }
+      pipes = pipes.filter(p => p.x + PIPE_W > -20);
+
+      // Collision
+      for (const p of pipes) {
+        if (collides(p)) { state = 'dead'; bestScore = Math.max(bestScore || 0, score); return; }
+      }
+      // Ground/ceiling collision (caught inside collides with a dummy)
+      if (burger.y + burger.r * 0.78 >= H * 0.8 || burger.y - burger.r * 0.78 <= 0) {
+        state = 'dead'; bestScore = Math.max(bestScore || 0, score);
+      }
+    }
+
+    function draw() {
+      drawBackground();
+
+      for (const p of pipes) drawPipe(p);
+
+      // Burger tilt angle
+      const angle = Math.max(-0.5, Math.min(0.5, burger.vy * 0.05));
+      drawBurger(burger.x, burger.y, angle);
+
+      drawScore();
+
+      if (state === 'idle') {
+        drawOverlay('🍔 Flappy Burger', 'Dodge the pipes!', '');
+      } else if (state === 'dead') {
+        const best = bestScore || score;
+        drawOverlay('Game Over!', `Score: ${score}`, `Best: ${best}`);
+      }
+    }
+
+    function flap() {
+      if (state === 'idle' || state === 'dead') {
+        init();
+        state = 'playing';
+        // spawn first pipe after a delay
+        setTimeout(spawnPipe, 1200);
+        return;
+      }
+      if (state === 'playing') {
+        burger.vy = FLAP;
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // ─── Input ───────────────────────────────────────────────
+
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); flap(); }
+    });
+    canvas.addEventListener('click',      flap);
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); flap(); }, { passive: false });
+
+    // ─── Start ───────────────────────────────────────────────
+
+    bestScore = 0;
+    init();
+    loop();
+  </script>
+</body>
+</html>
