@@ -1,0 +1,111 @@
+/**
+ * Google Apps Script — Send Stanford acceptance letter to yourself
+ *
+ * HOW TO USE:
+ * 1. Go to https://script.google.com and create a new project
+ * 2. Paste this entire file into the editor
+ * 3. Change STUDENT_NAME below to the character's name
+ * 4. Click Run → sendAcceptanceLetter
+ * 5. Authorize when prompted (needs Gmail access)
+ * 6. Check your Gmail inbox / Drafts
+ */
+
+// ── Configure these ────────────────────────────────────────────────────────────
+var STUDENT_NAME = "Alex Johnson";   // <-- change to the character's name
+var RECIPIENT    = "you@example.com"; // <-- change to the target email address
+var CREATE_DRAFT = false;            // false = send immediately, true = save as draft
+// ───────────────────────────────────────────────────────────────────────────────
+
+function sendAcceptanceLetter() {
+  var recipient = RECIPIENT;
+  var subject   = "Stanford University — Your Admission Decision";
+  var html      = getHtmlBody().replace(/\[Student Name\]/g, STUDENT_NAME);
+
+  if (CREATE_DRAFT) {
+    GmailApp.createDraft(recipient, subject, "", { htmlBody: html });
+    Logger.log("Draft created. Check your Gmail Drafts folder.");
+  } else {
+    GmailApp.sendEmail(recipient, subject, "", { htmlBody: html });
+    Logger.log("Email sent to: " + recipient);
+  }
+}
+
+function getHtmlBody() {
+  return '<!DOCTYPE html>\
+<html lang="en">\
+<head>\
+  <meta charset="UTF-8" />\
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>\
+  <title>Stanford Acceptance Letter</title>\
+  <style>\
+    body { font-family: \'Georgia\', serif; background: #f5f0eb; display: flex; justify-content: center; padding: 40px 20px; }\
+    .letter { background: #fff; max-width: 680px; width: 100%; padding: 60px 70px; border: 1px solid #ddd; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }\
+    .header { display: flex; align-items: center; border-bottom: 3px solid #8C1515; padding-bottom: 20px; margin-bottom: 30px; }\
+    .seal { width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0; border: 2px solid #8C1515; border-radius: 50%; display: table-cell; vertical-align: middle; text-align: center; }\
+    .header-text h1 { margin: 0; font-size: 22px; color: #8C1515; letter-spacing: 0.5px; }\
+    .header-text p { margin: 4px 0 0; font-size: 13px; color: #555; letter-spacing: 1px; text-transform: uppercase; }\
+    .date { text-align: right; color: #555; font-size: 14px; margin-bottom: 30px; }\
+    h2 { color: #8C1515; font-size: 26px; margin: 0 0 6px; }\
+    .subtitle { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 30px; }\
+    p { line-height: 1.8; color: #333; margin: 0 0 18px; font-size: 15px; }\
+    .details-box { background: #fdf8f0; border-left: 4px solid #8C1515; padding: 18px 22px; margin: 28px 0; font-size: 14px; }\
+    .details-box table { width: 100%; border-collapse: collapse; }\
+    .details-box td { padding: 5px 0; color: #333; }\
+    .details-box td:first-child { font-weight: bold; color: #8C1515; width: 45%; }\
+    .signature-block { margin-top: 36px; }\
+    .sig-name { font-weight: bold; font-size: 15px; color: #222; }\
+    .sig-title { font-size: 13px; color: #666; }\
+    .accept-section { text-align: center; margin-top: 40px; padding: 30px; background: #fdf8f0; border: 1px solid #e8d8c0; border-radius: 6px; }\
+    .accept-section p { font-size: 14px; color: #555; margin-bottom: 20px; }\
+    .accept-btn { background: #8C1515; color: #fff; border: none; padding: 16px 50px; font-size: 16px; font-family: \'Georgia\', serif; letter-spacing: 1px; cursor: pointer; border-radius: 3px; }\
+    .deadline { margin-top: 14px; font-size: 12px; color: #999; }\
+    .footer-bar { border-top: 3px solid #8C1515; margin-top: 40px; padding-top: 18px; text-align: center; font-size: 12px; color: #888; letter-spacing: 0.5px; }\
+  </style>\
+</head>\
+<body>\
+<div class="letter">\
+  <div class="header">\
+    <table cellpadding="0" cellspacing="0" style="width:80px;height:80px;border:2px solid #8C1515;border-radius:50%;margin-right:20px;flex-shrink:0;">\
+      <tr><td style="text-align:center;vertical-align:middle;padding:6px;">\
+        <div style="font-family:Georgia,serif;font-size:7px;color:#8C1515;letter-spacing:1.5px;font-weight:bold;line-height:1.4;">STANFORD<br/>UNIVERSITY</div>\
+        <div style="font-size:18px;color:#8C1515;line-height:1;">&#9650;</div>\
+        <div style="font-family:Georgia,serif;font-size:5px;color:#8C1515;letter-spacing:0.5px;line-height:1.4;">DIE LUFT DER<br/>FREIHEIT WEHT</div>\
+      </td></tr>\
+    </table>\
+    <div class="header-text">\
+      <h1>Stanford University</h1>\
+      <p>Office of Undergraduate Admission</p>\
+    </div>\
+  </div>\
+  <div class="date">March 17, 2026</div>\
+  <h2>Congratulations!</h2>\
+  <div class="subtitle">Class of 2033 — Admission Decision</div>\
+  <p>Dear [Student Name],</p>\
+  <p>On behalf of the faculty, staff, and students of Stanford University, it is my great pleasure to offer you admission to the Stanford Class of 2030. After a thorough review of your application, we are delighted to welcome you to one of the world\'s most dynamic and innovative academic communities.</p>\
+  <p>Your exceptional academic record, intellectual curiosity, and the unique perspective you bring set you apart from an extraordinarily competitive applicant pool. We believe you will contribute immensely to life at Stanford — in classrooms, research labs, performance halls, and beyond.</p>\
+  <div class="details-box">\
+    <table>\
+      <tr><td>Applicant:</td><td>[Student Name]</td></tr>\
+      <tr><td>Program:</td><td>Bachelor of Science / Bachelor of Arts</td></tr>\
+      <tr><td>Intended Entry:</td><td>Autumn Quarter 2026</td></tr>\
+      <tr><td>Application ID:</td><td>SU-2026-0043812</td></tr>\
+      <tr><td>Financial Aid:</td><td>Award package enclosed separately</td></tr>\
+    </table>\
+  </div>\
+  <p>Stanford\'s financial aid program is among the most generous in the nation. Families earning under $75,000 per year typically pay nothing for tuition, room, or board. Your detailed financial aid award letter will arrive within the next seven business days.</p>\
+  <p>We invite you to join us at <strong>Admit Weekend (April 10–12, 2026)</strong> to experience Stanford firsthand — meet your future classmates, explore campus, attend classes, and discover why so many consider the Farm their true home.</p>\
+  <p>Please confirm your enrollment by <strong>May 1, 2026</strong> using the button below. We look forward to seeing everything you will accomplish here.</p>\
+  <div class="signature-block">\
+    <div class="sig-name">Richard H. Shaw</div>\
+    <div class="sig-title">Dean of Undergraduate Admission<br/>Stanford University</div>\
+  </div>\
+  <div class="accept-section">\
+    <p>To confirm your place in the Stanford Class of 2030, please click the button below by <strong>May 1, 2026 at 11:59 PM PT</strong>.</p>\
+    <a href="#" style="display:inline-block;background:#8C1515;color:#fff;padding:16px 50px;font-size:16px;font-family:Georgia,serif;letter-spacing:1px;border-radius:3px;text-decoration:none;">Accept Your Offer of Admission</a>\
+    <div class="deadline">Deadline: May 1, 2026 &nbsp;|&nbsp; Questions? admission@stanford.edu</div>\
+  </div>\
+  <div class="footer-bar">Stanford University &bull; 450 Serra Mall, Stanford, CA 94305 &bull; admission.stanford.edu</div>\
+</div>\
+</body>\
+</html>';
+}
