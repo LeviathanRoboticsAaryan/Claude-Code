@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leviathan Robotics | FTC Team 25667</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #000000;
+            --bg-elevated: #0a0a0a;
+            --bg-card: #111111;
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+            --border: rgba(255,255,255,0.08);
+            --radius: 20px;
+            --transition: 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        html { scroll-behavior: smooth; font-size: 16px; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* === NAV === */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.3s;
+        }
+        .nav-inner {
+            max-width: 1200px; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2rem; height: 52px;
+        }
+        .nav-brand {
+            font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em;
+            color: var(--text-primary);
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .nav-brand span { color: var(--accent); }
+        .nav-links { display: flex; gap: 2rem; list-style: none; }
+        .nav-links a {
+            color: var(--text-secondary); text-decoration: none;
+            font-size: 0.85rem; font-weight: 400; letter-spacing: 0.01em;
+            transition: color 0.3s;
+            position: relative;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute; bottom: -4px; left: 0;
+            width: 0; height: 1.5px; background: var(--accent);
+            transition: width 0.3s ease;
+        }
+        .nav-links a:hover { color: var(--text-primary); }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-links a.active { color: var(--text-primary); }
+        .nav-links a.active::after { width: 100%; }
+
+        .hamburger { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+        .hamburger span {
+            display: block; width: 20px; height: 1.5px; background: var(--text-primary);
+            margin: 5px 0; transition: var(--transition);
+        }
+
+        /* === HERO === */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center;
+            padding: 8rem 2rem 4rem; position: relative; overflow: hidden;
+        }
+        .hero::before {
+            content: ''; position: absolute; top: -50%; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 800px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none; animation: pulseGlow 6s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.7; transform: translateX(-50%) scale(1.1); }
+        }
+        .hero-badge {
+            display: inline-block; padding: 0.35rem 1rem;
+            border: 1px solid var(--border); border-radius: 100px;
+            font-size: 0.8rem; color: var(--accent); letter-spacing: 0.05em;
+            text-transform: uppercase; margin-bottom: 1.5rem;
+            background: rgba(56, 189, 248, 0.06);
+        }
+        .hero h1 {
+            font-size: clamp(3rem, 8vw, 6.5rem); font-weight: 700;
+            letter-spacing: -0.04em; line-height: 1.05;
+            background: linear-gradient(135deg, #fff 0%, #38bdf8 50%, #818cf8 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text; margin-bottom: 1.5rem;
+        }
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.3rem); color: var(--text-secondary);
+            max-width: 600px; line-height: 1.6; margin-bottom: 3rem;
+        }
+        .hero-robot {
+            position: relative; width: min(600px, 90vw); margin-top: 1rem;
+        }
+        .hero-robot img {
+            width: 100%; height: auto; border-radius: var(--radius);
+            filter: drop-shadow(0 0 60px rgba(56, 189, 248, 0.15));
+            animation: floatBot 5s ease-in-out infinite;
+        }
+        @keyframes floatBot {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+
+        /* === SCROLL ANIMATIONS === */
+        .reveal {
+            opacity: 0; transform: translateY(40px);
+            transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+                        transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+
+        /* === SECTIONS === */
+        section { padding: 6rem 2rem; position: relative; }
+        .section-inner { max-width: 1100px; margin: 0 auto; }
+
+        .section-label {
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em;
+            color: var(--accent); margin-bottom: 0.75rem; font-weight: 500;
+        }
+        .section-title {
+            font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700;
+            letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 1rem;
+        }
+        .section-subtitle {
+            font-size: 1.1rem; color: var(--text-secondary); max-width: 600px;
+            line-height: 1.6; margin-bottom: 3rem;
+        }
+
+        /* === TABS === */
+        .tabs-container {
+            position: sticky; top: 52px; z-index: 100;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .tabs {
+            max-width: 1100px; margin: 0 auto;
+            display: flex; gap: 0; padding: 0 2rem;
+        }
+        .tab-btn {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 0.9rem; font-weight: 500; padding: 1rem 1.5rem;
+            cursor: pointer; position: relative; transition: color 0.3s;
+            font-family: inherit; letter-spacing: -0.01em;
+        }
+        .tab-btn::after {
+            content: ''; position: absolute; bottom: 0; left: 1rem; right: 1rem;
+            height: 2px; background: var(--accent);
+            transform: scaleX(0); transition: transform 0.3s ease;
+        }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { color: var(--text-primary); }
+        .tab-btn.active::after { transform: scaleX(1); }
+
+        .tab-content { display: none; animation: fadeInTab 0.5s ease; }
+        .tab-content.active { display: block; }
+        @keyframes fadeInTab {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === STATS BAR === */
+        .stats-bar {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem; margin: 3rem 0;
+        }
+        .stat {
+            text-align: center; padding: 2rem 1rem;
+            background: var(--bg-card); border-radius: var(--radius);
+            border: 1px solid var(--border);
+            transition: transform 0.4s ease, border-color 0.4s ease;
+        }
+        .stat:hover { transform: translateY(-4px); border-color: rgba(56,189,248,0.3); }
+        .stat-number {
+            font-size: 2.5rem; font-weight: 700; letter-spacing: -0.03em;
+            background: linear-gradient(135deg, var(--accent), #818cf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .stat-label { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+        /* === CARDS === */
+        .card-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        .card {
+            background: var(--bg-card); border-radius: var(--radius);
+            border: 1px solid var(--border); overflow: hidden;
+            transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+        }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(56,189,248,0.25);
+            box-shadow: 0 20px 60px rgba(56,189,248,0.08);
+        }
+        .card-img {
+            width: 100%; height: 220px; object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+        .card:hover .card-img { transform: scale(1.04); }
+        .card-img-wrapper { overflow: hidden; }
+        .card-body { padding: 1.5rem; }
+        .card-body h3 {
+            font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+        .card-body p { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+        .card-tag {
+            display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px;
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+            background: var(--accent-glow); color: var(--accent);
+            margin-bottom: 0.75rem; font-weight: 500;
+        }
+
+        /* === SUBSYSTEM DETAIL === */
+        .subsystem {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3rem;
+            align-items: center; margin-bottom: 5rem;
+            padding: 2.5rem; border-radius: var(--radius);
+            background: var(--bg-card); border: 1px solid var(--border);
+        }
+        .subsystem:nth-child(even) .subsystem-img { order: -1; }
+        .subsystem-img {
+            width: 100%; border-radius: 12px; overflow: hidden;
+        }
+        .subsystem-img img {
+            width: 100%; height: auto; display: block;
+            transition: transform 0.5s ease;
+        }
+        .subsystem:hover .subsystem-img img { transform: scale(1.03); }
+        .subsystem h3 {
+            font-size: 1.6rem; font-weight: 600; margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
+        }
+        .subsystem p { color: var(--text-secondary); line-height: 1.7; font-size: 0.95rem; margin-bottom: 1rem; }
+        .subsystem ul { list-style: none; padding: 0; }
+        .subsystem ul li {
+            padding: 0.4rem 0; color: var(--text-secondary); font-size: 0.9rem;
+            padding-left: 1.2rem; position: relative;
+        }
+        .subsystem ul li::before {
+            content: ''; position: absolute; left: 0; top: 50%;
+            width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent); transform: translateY(-50%);
+        }
+
+        /* === PROBLEM-SOLUTION === */
+        .ps-block {
+            display: flex; gap: 1rem; margin-top: 1rem;
+        }
+        .ps-item {
+            flex: 1; padding: 1rem; border-radius: 12px;
+            border: 1px solid var(--border); font-size: 0.85rem;
+        }
+        .ps-item.problem { border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.05); }
+        .ps-item.solution { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.05); }
+        .ps-label {
+            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em;
+            font-weight: 600; margin-bottom: 0.4rem;
+        }
+        .ps-item.problem .ps-label { color: #ef4444; }
+        .ps-item.solution .ps-label { color: #22c55e; }
+        .ps-item p { color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+        /* === TIMELINE === */
+        .timeline { position: relative; padding-left: 2rem; margin-top: 2rem; }
+        .timeline::before {
+            content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+            width: 2px; background: linear-gradient(to bottom, var(--accent), rgba(56,189,248,0.1));
+        }
+        .timeline-item {
+            position: relative; margin-bottom: 2.5rem; padding-left: 1.5rem;
+        }
+        .timeline-item::before {
+            content: ''; position: absolute; left: -2rem; top: 6px;
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--accent); border: 2px solid var(--bg);
+            box-shadow: 0 0 12px rgba(56,189,248,0.4);
+            transform: translateX(-4px);
+        }
+        .timeline-date {
+            font-size: 0.75rem; color: var(--accent); text-transform: uppercase;
+            letter-spacing: 0.1em; margin-bottom: 0.3rem; font-weight: 500;
+        }
+        .timeline-item h4 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.4rem; }
+        .timeline-item p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+
+        /* === TEAM GRID === */
+        .team-photo {
+            width: 100%; border-radius: var(--radius); overflow: hidden;
+            margin-bottom: 3rem;
+        }
+        .team-photo img { width: 100%; height: auto; display: block; }
+
+        /* === SPONSORS === */
+        .sponsors-grid {
+            display: flex; flex-wrap: wrap; gap: 2rem;
+            align-items: center; justify-content: center;
+            padding: 2rem 0;
+        }
+        .sponsor-logo {
+            height: 40px; opacity: 0.5; filter: grayscale(1) brightness(2);
+            transition: opacity 0.3s, filter 0.3s;
+        }
+        .sponsor-logo:hover { opacity: 1; filter: grayscale(0) brightness(1); }
+
+        /* === TESTIMONIALS === */
+        .testimonials-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem; margin-top: 2rem;
+        }
+        .testimonial {
+            padding: 1.5rem; border-radius: var(--radius);
+            background: var(--bg-card); border: 1px solid var(--border);
+            font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;
+            font-style: italic; position: relative;
+            transition: border-color 0.4s;
+        }
+        .testimonial:hover { border-color: rgba(56,189,248,0.3); }
+        .testimonial::before {
+            content: '\201C'; position: absolute; top: 0.5rem; left: 1rem;
+            font-size: 3rem; color: var(--accent); opacity: 0.3;
+            font-style: normal; line-height: 1;
+        }
+        .testimonial-text { padding-top: 1.5rem; }
+        .testimonial-author {
+            margin-top: 1rem; font-style: normal; font-weight: 500;
+            color: var(--text-primary); font-size: 0.8rem;
+        }
+
+        /* === DESIGN PROCESS === */
+        .process-steps {
+            display: grid; grid-template-columns: repeat(5, 1fr);
+            gap: 0; margin: 2rem 0; position: relative;
+        }
+        .process-step {
+            text-align: center; padding: 1.5rem 0.5rem; position: relative;
+        }
+        .process-step::after {
+            content: ''; position: absolute; top: 28px; right: 0;
+            width: 50%; height: 2px; background: var(--border);
+        }
+        .process-step::before {
+            content: ''; position: absolute; top: 28px; left: 0;
+            width: 50%; height: 2px; background: var(--border);
+        }
+        .process-step:first-child::before { display: none; }
+        .process-step:last-child::after { display: none; }
+        .process-icon {
+            width: 48px; height: 48px; border-radius: 50%;
+            background: var(--accent-glow); border: 2px solid rgba(56,189,248,0.3);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 0.75rem; font-size: 1.2rem; position: relative; z-index: 1;
+        }
+        .process-step h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.3rem; }
+        .process-step p { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; }
+
+        /* === FOOTER === */
+        footer {
+            padding: 3rem 2rem; text-align: center;
+            border-top: 1px solid var(--border);
+        }
+        footer p { color: var(--text-secondary); font-size: 0.85rem; }
+        footer a { color: var(--accent); text-decoration: none; }
+
+        /* === MOBILE === */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .nav-links.open {
+                display: flex; flex-direction: column;
+                position: absolute; top: 52px; left: 0; right: 0;
+                background: rgba(0,0,0,0.95); padding: 1rem 2rem;
+                gap: 0; border-bottom: 1px solid var(--border);
+            }
+            .nav-links.open a { padding: 0.75rem 0; display: block; }
+            .hamburger { display: block; }
+            .hamburger.open span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+            .hamburger.open span:nth-child(2) { opacity: 0; }
+            .hamburger.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+            .subsystem { grid-template-columns: 1fr; }
+            .subsystem:nth-child(even) .subsystem-img { order: 0; }
+            .process-steps { grid-template-columns: 1fr; gap: 0.5rem; }
+            .process-step::before, .process-step::after { display: none; }
+            .ps-block { flex-direction: column; }
+            .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .tab-btn { white-space: nowrap; padding: 1rem; font-size: 0.82rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+    <div class="nav-inner">
+        <div class="nav-brand"><span>25667</span> Leviathan Robotics</div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="#home" class="active">Home</a></li>
+            <li><a href="#hardware">Hardware</a></li>
+            <li><a href="#software">Software</a></li>
+            <li><a href="#outreach">Outreach</a></li>
+        </ul>
+        <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+    <div class="hero-badge">FTC Team 25667 &mdash; Sandshrew Regionals</div>
+    <h1>Leviathan<br>Robotics</h1>
+    <p>Inspiring innovation, teamwork, and a passion for STEM through the challenges of robotics. Built with precision. Driven by purpose.</p>
+    <div class="hero-robot">
+        <img src="images/page16_img2.jpg" alt="Sandshrew Robot CAD render">
+    </div>
+</section>
+
+<!-- ABOUT / STATS -->
+<section id="about">
+    <div class="section-inner">
+        <div class="reveal">
+            <div class="section-label">About Us</div>
+            <div class="section-title">Engineering the future,<br>one build at a time.</div>
+            <div class="section-subtitle">We strive to design creative solutions, learn from every success and setback, and uphold the values of Gracious Professionalism. Our core values are teamwork and innovation.</div>
+        </div>
+
+        <div class="stats-bar reveal">
+            <div class="stat reveal-delay-1">
+                <div class="stat-number">7</div>
+                <div class="stat-label">Team Members</div>
+            </div>
+            <div class="stat reveal-delay-2">
+                <div class="stat-number">7</div>
+                <div class="stat-label">Sponsors</div>
+            </div>
+            <div class="stat reveal-delay-3">
+                <div class="stat-number">810+</div>
+                <div class="stat-label">People Reached</div>
+            </div>
+            <div class="stat reveal-delay-4">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Robot Versions</div>
+            </div>
+        </div>
+
+        <div class="team-photo reveal">
+            <img src="images/page2_img2.jpg" alt="Team photo of Leviathan Robotics members">
+        </div>
+
+        <div class="sponsors-grid reveal">
+            <img src="images/page1_img9.jpg" alt="Apple" class="sponsor-logo">
+            <img src="images/page1_img8.jpg" alt="Meta" class="sponsor-logo">
+            <img src="images/page1_img4.jpg" alt="ServiceNow" class="sponsor-logo">
+        </div>
+    </div>
+</section>
+
+<!-- TABS BAR -->
+<div class="tabs-container" id="tabsBar">
+    <div class="tabs">
+        <button class="tab-btn active" data-tab="hardware">Hardware</button>
+        <button class="tab-btn" data-tab="software">Software</button>
+        <button class="tab-btn" data-tab="outreach">Outreach</button>
+    </div>
+</div>
+
+<!-- HARDWARE TAB -->
+<section id="hardware">
+    <div class="tab-content active" data-tab-content="hardware">
+        <div class="section-inner">
+
+            <!-- Design Process -->
+            <div class="reveal">
+                <div class="section-label">Engineering</div>
+                <div class="section-title">Design Process</div>
+                <div class="section-subtitle">A rigorous, iterative approach from concept to competition-ready robot.</div>
+            </div>
+
+            <div class="process-steps reveal">
+                <div class="process-step">
+                    <div class="process-icon">1</div>
+                    <h4>Brainstorm</h4>
+                    <p>Discuss high-level design and identify major subsystems</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon">2</div>
+                    <h4>Design</h4>
+                    <p>Create effective prototypes with full CAD models</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon">3</div>
+                    <h4>Prototype</h4>
+                    <p>Laser-cut wood & 3D-printed parts to evaluate ideas</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon">4</div>
+                    <h4>Build & Test</h4>
+                    <p>Custom-cut metal and high-quality 3D prints</p>
+                </div>
+                <div class="process-step">
+                    <div class="process-icon">5</div>
+                    <h4>Improve</h4>
+                    <p>Refine for performance, speed, and reliability</p>
+                </div>
+            </div>
+
+            <!-- Drivetrain -->
+            <div class="subsystem reveal" style="margin-top: 4rem;">
+                <div>
+                    <div class="card-tag">Drivetrain</div>
+                    <h3>Vertical Drivetrain</h3>
+                    <p>By choosing a vertical drivetrain, we made the robot compact enough to fit a spindexer inside the drivetrain while staying within the 16" x 16" endgame square and 18" height limit.</p>
+                    <ul>
+                        <li>Bevel-gear and vertical-motor design for seamless spindexer integration</li>
+                        <li>Two odometry pods at center for optimal localization</li>
+                        <li>Compact form factor with base-level spindexer</li>
+                    </ul>
+                    <div class="ps-block">
+                        <div class="ps-item problem">
+                            <div class="ps-label">Tradeoff</div>
+                            <p>Vertical motors make turret integration more difficult</p>
+                        </div>
+                        <div class="ps-item solution">
+                            <div class="ps-label">Solution</div>
+                            <p>Developed innovative inverted turret layout to recover critical space</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="subsystem-img">
+                    <img src="images/page9_img3.jpg" alt="Drivetrain CAD">
+                </div>
+            </div>
+
+            <!-- Spindexer -->
+            <div class="subsystem reveal">
+                <div class="subsystem-img">
+                    <img src="images/page10_img3.jpg" alt="Spindexer detail">
+                </div>
+                <div>
+                    <div class="card-tag">Sorting</div>
+                    <h3>Spindexer</h3>
+                    <p>Receives up to three artifacts from the intake, sorts them according to the required game pattern, and smoothly transfers them to the flywheel using an omni wheel.</p>
+                    <ul>
+                        <li>Solid, smooth interior walls to reduce snag points</li>
+                        <li>Enlarged spinner with extended arms for maximum grip</li>
+                        <li>Mounts both Control Hub and Expansion Hub along its side</li>
+                    </ul>
+                    <div class="ps-block">
+                        <div class="ps-item problem">
+                            <div class="ps-label">Problem</div>
+                            <p>Artifacts got stuck on standoffs; spinner had minimal contact</p>
+                        </div>
+                        <div class="ps-item solution">
+                            <div class="ps-label">Solution</div>
+                            <p>Replaced standoffs with solid walls; enlarged spinner diameter</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Turret -->
+            <div class="subsystem reveal">
+                <div>
+                    <div class="card-tag">Aiming</div>
+                    <h3>Turret</h3>
+                    <p>Enables high-speed rotation through a belt drive, maintains flush alignment with the flywheel, and provides precise motor-controlled operation.</p>
+                    <ul>
+                        <li>Metal ball bearings for 4x faster rotation vs. 3D-printed version</li>
+                        <li>Modularized from flywheel for faster iteration cycles</li>
+                        <li>Innovative attachment points for stability and fast prototyping</li>
+                    </ul>
+                    <div class="ps-block">
+                        <div class="ps-item problem">
+                            <div class="ps-label">Problem</div>
+                            <p>3D-printed turret was slow &mdash; couldn't use ball bearings</p>
+                        </div>
+                        <div class="ps-item solution">
+                            <div class="ps-label">Solution</div>
+                            <p>Replaced with manufactured turntable bearing turret &mdash; 4x faster</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="subsystem-img">
+                    <img src="images/page11_img3.jpg" alt="Turret design">
+                </div>
+            </div>
+
+            <!-- Flywheel -->
+            <div class="subsystem reveal">
+                <div class="subsystem-img">
+                    <img src="images/page12_img2.jpg" alt="Flywheel system">
+                </div>
+                <div>
+                    <div class="card-tag">Shooting</div>
+                    <h3>Flywheel</h3>
+                    <p>Receives artifacts from the spindexer and shoots them toward the goal. Uses Limelight camera to detect AprilTags for precise targeting.</p>
+                    <ul>
+                        <li>Calculates distance to goal using camera angle data</li>
+                        <li>Regression model maps speed to shooting distance</li>
+                        <li>Tungsten putty increases inertia for longer shots</li>
+                        <li>Compatible with Limelight 3a and turret system</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Intake -->
+            <div class="subsystem reveal">
+                <div>
+                    <div class="card-tag">Collection</div>
+                    <h3>Intake</h3>
+                    <p>Efficiently intakes artifacts and smoothly funnels them into the spindexer with sandpaper-enhanced grip wheels.</p>
+                    <ul>
+                        <li>Enlarged funnel design to absorb high-speed impacts</li>
+                        <li>Sandpaper grip for reliable artifact collection</li>
+                        <li>Protective funnel guards against wall and robot collisions</li>
+                    </ul>
+                    <div class="ps-block">
+                        <div class="ps-item problem">
+                            <div class="ps-label">Lesson Learned</div>
+                            <p>Control Hub mounted at 45&deg; inside spindexer caused IMU misalignment, breaking Road Runner odometry</p>
+                        </div>
+                        <div class="ps-item solution">
+                            <div class="ps-label">Fix</div>
+                            <p>Relocated Control Hub to vertical mount on top of spindexer, restoring proper odometry</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="subsystem-img">
+                    <img src="images/page13_img2.jpg" alt="Intake system">
+                </div>
+            </div>
+
+            <!-- Sensors -->
+            <div class="reveal" style="margin-top: 2rem;">
+                <div class="section-label">Sensors</div>
+                <div class="section-title" style="font-size: clamp(1.5rem, 3vw, 2rem);">Sensor Suite</div>
+            </div>
+            <div class="card-grid reveal" style="margin-top: 1.5rem;">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Vision</div>
+                        <h3>Limelight 3A</h3>
+                        <p>Precise aiming via real-time AprilTag detection. Provides autonomous localization and dynamic flywheel speed adjustment using trigonometric distance calculations.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Detection</div>
+                        <h3>Color Sensor V3</h3>
+                        <p>Detects incoming ball presence and color for automatic sorting during autonomous. Position carefully tuned for consistent detection accuracy.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Tracking</div>
+                        <h3>2M Distance Sensor</h3>
+                        <p>Detects when a ball leaves the system and updates the ball count. Repositioned upward for longer sampling window to prevent missed detections.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Robot Progression -->
+            <div class="reveal" style="margin-top: 5rem;">
+                <div class="section-label">Evolution</div>
+                <div class="section-title">Robot Progression</div>
+            </div>
+            <div class="timeline reveal">
+                <div class="timeline-item">
+                    <div class="timeline-date">Winter &mdash; Play Space Qualifier</div>
+                    <h4>Version 1</h4>
+                    <p>Enclosed spindexer for sorting, simple flywheel for close-range shots. Featured tungsten putty inside flywheel to increase inertia for faster, further shooting.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">January &mdash; Santa Clara Qualifier</div>
+                    <h4>Version 2</h4>
+                    <p>Added belt-driven turret with stacked bearings and 3D-printed base. Mounted Limelight 3A camera on flywheel for optimal height and turret compatibility.</p>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-date">March &mdash; NorCal Regionals</div>
+                    <h4>Version 3</h4>
+                    <p>Upgraded to manufactured turntable turret with metal ball bearings for reduced friction. Slimmed spindexer walls for smoother rotation. Competition-ready build.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- SOFTWARE TAB -->
+<section id="software">
+    <div class="tab-content" data-tab-content="software">
+        <div class="section-inner">
+            <div class="reveal">
+                <div class="section-label">Software</div>
+                <div class="section-title">Intelligent Control Systems</div>
+                <div class="section-subtitle">Advanced autonomous navigation, computer vision, and precise motion control power our robot's performance.</div>
+            </div>
+
+            <!-- Road Runner -->
+            <div class="subsystem reveal">
+                <div>
+                    <div class="card-tag">Navigation</div>
+                    <h3>Road Runner</h3>
+                    <p>Road Runner provides precise path planning, generating smooth trajectories during autonomous for predictable robot movement. Combined with sensor data for accurate localization.</p>
+                    <ul>
+                        <li>Enhanced localization with odometry integration</li>
+                        <li>Auto-correction and real-time path adjustment</li>
+                        <li>Robust recovery when bumped off course</li>
+                    </ul>
+                </div>
+                <div class="subsystem-img">
+                    <img src="images/page9_img5.jpg" alt="Odometry system">
+                </div>
+            </div>
+
+            <div class="card-grid reveal">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Challenge</div>
+                        <h3>Turning Inconsistencies</h3>
+                        <p>Selecting the wrong driving mode (Mecanum Drive vs Programming Board) caused unpredictable turning behavior. After extensive troubleshooting, we learned to correctly switch between modes for consistent performance.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Challenge</div>
+                        <h3>Complex Tuning Process</h3>
+                        <p>Over 10 hours adjusting nearly 40 variables with extreme values. Added teammates to reset the robot each cycle and used Desmos to visualize equations, significantly streamlining the process.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vision / Limelight software side -->
+            <div class="subsystem reveal" style="margin-top: 3rem;">
+                <div class="subsystem-img">
+                    <img src="images/page12_img3.jpg" alt="Distance modeling graph">
+                </div>
+                <div>
+                    <div class="card-tag">Computer Vision</div>
+                    <h3>AprilTag Detection & Distance Modeling</h3>
+                    <p>The Limelight 3A provides real-time target alignment by detecting AprilTags on the goal. Our software calculates exact distance using camera angle data, then uses a regression model to determine optimal flywheel speed.</p>
+                    <ul>
+                        <li>Trigonometric distance calculation from camera angles</li>
+                        <li>Regression-based speed-to-distance mapping</li>
+                        <li>Vision-based failsafe for odometry drift correction</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Autonomous sensor fusion -->
+            <div class="reveal" style="margin-top: 2rem;">
+                <div class="section-label">Autonomy</div>
+                <div class="section-title" style="font-size: clamp(1.5rem, 3vw, 2rem);">Sensor Fusion</div>
+                <div class="section-subtitle">Multiple sensor inputs combine for reliable autonomous performance.</div>
+            </div>
+            <div class="card-grid reveal">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Odometry</div>
+                        <h3>Dual Odometry Pods</h3>
+                        <p>Two pods at the robot's center provide optimal placement for accurate localization, working with Road Runner's path correction algorithms.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Color Sorting</div>
+                        <h3>Autonomous Ball Sorting</h3>
+                        <p>Color Sensor V3 detects incoming ball color and triggers automatic sorting logic during autonomous, allowing the spindexer to arrange artifacts in the required pattern.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Redundancy</div>
+                        <h3>Vision-Based Fallback</h3>
+                        <p>Limelight serves as a redundancy system, providing vision-based targeting as a failsafe to correct positional errors from odometry drift.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- OUTREACH TAB -->
+<section id="outreach">
+    <div class="tab-content" data-tab-content="outreach">
+        <div class="section-inner">
+            <div class="reveal">
+                <div class="section-label">Community Impact</div>
+                <div class="section-title">Spreading FIRST</div>
+                <div class="section-subtitle">Connecting with communities locally and internationally to inspire the next generation of innovators.</div>
+            </div>
+
+            <div class="stats-bar reveal">
+                <div class="stat">
+                    <div class="stat-number">810+</div>
+                    <div class="stat-label">Total People Reached</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">$3,500</div>
+                    <div class="stat-label">Raised via Summer Camp</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">100+</div>
+                    <div class="stat-label">Hours Recycling Filament</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Countries Reached</div>
+                </div>
+            </div>
+
+            <!-- Outreach Events -->
+            <div class="card-grid reveal">
+                <div class="card">
+                    <div class="card-img-wrapper">
+                        <img src="images/page5_img3.jpg" class="card-img" alt="Argonaut Science Fair">
+                    </div>
+                    <div class="card-body">
+                        <div class="card-tag">Event</div>
+                        <h3>Argonaut Science Fair</h3>
+                        <p>Partnered with Argonaut Elementary School to showcase our robot, introducing the FIRST programs and promoting FIRST values to 200+ attendees.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-img-wrapper">
+                        <img src="images/page5_img4.jpg" class="card-img" alt="Tech Museum">
+                    </div>
+                    <div class="card-body">
+                        <div class="card-tag">Event</div>
+                        <h3>San Jose Tech Museum</h3>
+                        <p>Showcased our robot at one of the region's most vibrant innovation hubs. Our hands-on "fun-play" experience became a crowd favorite, engaging 500+ visitors.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-img-wrapper">
+                        <img src="images/page6_img3.jpg" class="card-img" alt="Technical Outreach">
+                    </div>
+                    <div class="card-body">
+                        <div class="card-tag">Education</div>
+                        <h3>Stanford CAD Workshop</h3>
+                        <p>Partnered with a Stanford professor in radiation oncology to teach advanced CAD design to 60+ people, connecting top science communities with FIRST.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SustainPrint -->
+            <div class="subsystem reveal" style="margin-top: 3rem;">
+                <div>
+                    <div class="card-tag">Sustainability</div>
+                    <h3>SustainPrint Initiative</h3>
+                    <p>We launched a filament recycling program to turn waste into possibility. Partnering with Stanford University's Department of Radiation Oncology and Maker Nexus, we built a bridge between cutting-edge research and the local STEM community.</p>
+                    <ul>
+                        <li>100+ hours reprocessing 6.5kg+ of filament waste</li>
+                        <li>Reproduced 20+ spools of high-quality recycled material</li>
+                        <li>Several spools used to prototype our competition robot</li>
+                        <li>Recycled 4 large boxes of waste from Maker Nexus makerspace</li>
+                    </ul>
+                </div>
+                <div class="subsystem-img">
+                    <img src="images/page4_img8.jpg" alt="SustainPrint recycling bins">
+                </div>
+            </div>
+
+            <!-- Summer Camp -->
+            <div class="subsystem reveal">
+                <div class="subsystem-img">
+                    <img src="images/page7_img7.jpg" alt="FLL Summer Camp group">
+                </div>
+                <div>
+                    <div class="card-tag">Mentorship</div>
+                    <h3>FLL Summer Camp</h3>
+                    <p>A 5-day full-time camp for 15 children (2nd&ndash;8th grade) new to robotics. Our comprehensive curriculum integrated STEM concepts, FIRST principles, and FLL fundamentals.</p>
+                    <ul>
+                        <li>Average rating of 4.9/5 stars from anonymous survey</li>
+                        <li>Raised $3,500 for team development</li>
+                        <li>Most families expressed strong interest in FIRST programs</li>
+                        <li>Hands-on building, coding, and problem-solving curriculum</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Testimonials -->
+            <div class="reveal" style="margin-top: 2rem;">
+                <div class="section-label">Feedback</div>
+                <div class="section-title" style="font-size: clamp(1.5rem, 3vw, 2rem);">What parents are saying</div>
+            </div>
+            <div class="testimonials-grid reveal">
+                <div class="testimonial">
+                    <div class="testimonial-text">My son Luke had such a great time last week! He learnt so much about robotics/coding knowledge. Is there any way my son can keep in touch with the Leviathan robotics team throughout the school year?</div>
+                    <div class="testimonial-author">&mdash; Joyce Ho</div>
+                </div>
+                <div class="testimonial">
+                    <div class="testimonial-text">My son thoroughly enjoyed the camp. It was a great mix of robotics, STEM, and playtime. Very impressed with the instructors at this age!</div>
+                    <div class="testimonial-author">&mdash; Anonymous</div>
+                </div>
+                <div class="testimonial">
+                    <div class="testimonial-text">I am extremely grateful for your patient teaching. We felt blessed to have enrolled Isaac into Leviathan Robotic camp.</div>
+                    <div class="testimonial-author">&mdash; Jessie Liu</div>
+                </div>
+                <div class="testimonial">
+                    <div class="testimonial-text">We truly thank you for all the activities this camp has offered. If you have future programs or activities, we would love to hear about them so she can join.</div>
+                    <div class="testimonial-author">&mdash; Ariel Kuo</div>
+                </div>
+            </div>
+
+            <!-- International Outreach -->
+            <div class="card-grid reveal" style="margin-top: 3rem;">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Global</div>
+                        <h3>International Outreach</h3>
+                        <p>Team members traveled to the Caribbean, Turkey, China, Japan, and Taiwan to spread the idea of FTC, reaching 50+ people from various backgrounds across 5 countries.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-tag">Hosting</div>
+                        <h3>FRC & FLL Partnerships</h3>
+                        <p>Hosted events connecting FRC teams with FLL families, bringing together diverse FIRST community members to strengthen the robotics ecosystem in our region.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
+    <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
+</footer>
+
+<script>
+    // Hamburger toggle
+    const hamburger = document.getElementById('hamburger');
+    const navLinks = document.getElementById('navLinks');
+    hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('open');
+        navLinks.classList.toggle('open');
+    });
+
+    // Close mobile nav on link click
+    navLinks.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+            hamburger.classList.remove('open');
+            navLinks.classList.remove('open');
+        });
+    });
+
+    // Tabs
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.tab;
+
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            tabContents.forEach(tc => {
+                tc.classList.remove('active');
+                if (tc.dataset.tabContent === target) {
+                    tc.classList.add('active');
+                    // Re-trigger reveal animations inside the newly active tab
+                    tc.querySelectorAll('.reveal').forEach(el => {
+                        el.classList.remove('visible');
+                        void el.offsetWidth; // force reflow
+                        observeElement(el);
+                    });
+                }
+            });
+
+            // Scroll to the tab section
+            const sectionId = target === 'hardware' ? 'hardware' : target === 'software' ? 'software' : 'outreach';
+            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    // Nav active link highlighting
+    const navAnchors = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id]');
+
+    function updateActiveNav() {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop - 120;
+            if (scrollY >= sectionTop) current = section.getAttribute('id');
+        });
+        navAnchors.forEach(a => {
+            a.classList.remove('active');
+            if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+        });
+    }
+    window.addEventListener('scroll', updateActiveNav);
+
+    // Scroll reveal (Intersection Observer)
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    function observeElement(el) {
+        observer.observe(el);
+    }
+
+    document.querySelectorAll('.reveal').forEach(el => observeElement(el));
+
+    // Sync tabs with scroll position
+    function updateActiveTabs() {
+        const hw = document.getElementById('hardware');
+        const sw = document.getElementById('software');
+        const or = document.getElementById('outreach');
+        const scrollPos = window.scrollY + 160;
+
+        let activeTab = 'hardware';
+        if (or && scrollPos >= or.offsetTop) activeTab = 'outreach';
+        else if (sw && scrollPos >= sw.offsetTop) activeTab = 'software';
+
+        tabBtns.forEach(b => {
+            b.classList.toggle('active', b.dataset.tab === activeTab);
+        });
+
+        // Show the correct tab content
+        tabContents.forEach(tc => {
+            tc.classList.toggle('active', tc.dataset.tabContent === activeTab);
+        });
+    }
+    window.addEventListener('scroll', updateActiveTabs);
+</script>
+
+</body>
+</html>
