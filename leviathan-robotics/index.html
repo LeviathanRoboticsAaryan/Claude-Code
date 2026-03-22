@@ -47,8 +47,17 @@
         .nav-brand {
             font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em;
             color: var(--text-primary);
-            display: flex; align-items: center; gap: 0.5rem;
+            display: flex; align-items: center; gap: 0.6rem;
             cursor: pointer;
+        }
+        .nav-brand img {
+            height: 32px; width: auto;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.3));
+            transition: transform 0.3s ease, filter 0.3s ease;
+        }
+        .nav-brand:hover img {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.5));
         }
         .nav-brand span { color: var(--accent); }
         .nav-links { display: flex; gap: 2rem; list-style: none; }
@@ -100,6 +109,12 @@
         @keyframes pulseGlow {
             0%, 100% { opacity: 0.4; transform: translateX(-50%) scale(1); }
             50% { opacity: 0.7; transform: translateX(-50%) scale(1.1); }
+        }
+        .hero-logo {
+            width: 120px; height: auto; margin-bottom: 1.5rem;
+            filter: drop-shadow(0 0 30px rgba(56, 189, 248, 0.3));
+            animation: floatBot 5s ease-in-out infinite;
+            animation-delay: -2.5s;
         }
         .hero-badge {
             display: inline-block; padding: 0.35rem 1rem;
@@ -393,7 +408,7 @@
 <!-- NAV -->
 <nav>
     <div class="nav-inner">
-        <div class="nav-brand" data-page="home"><span>25667</span> Leviathan Robotics</div>
+        <div class="nav-brand" data-page="home"><img src="images/page1_img7.jpg" alt="Leviathan Logo"><span>25667</span> Leviathan Robotics</div>
         <ul class="nav-links" id="navLinks">
             <li><a data-page="home" class="active">Home</a></li>
             <li><a data-page="hardware">Hardware</a></li>
@@ -411,6 +426,7 @@
 
     <!-- HERO -->
     <div class="hero">
+        <img src="images/page1_img7.jpg" alt="Leviathan Robotics Logo" class="hero-logo">
         <div class="hero-badge">FTC Team 25667 &mdash; Sandshrew Regionals</div>
         <h1>Leviathan<br>Robotics</h1>
         <p>Inspiring innovation, teamwork, and a passion for STEM through the challenges of robotics. Built with precision. Driven by purpose.</p>
