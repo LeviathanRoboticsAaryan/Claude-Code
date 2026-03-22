@@ -48,6 +48,7 @@
             font-size: 1.1rem; font-weight: 600; letter-spacing: -0.02em;
             color: var(--text-primary);
             display: flex; align-items: center; gap: 0.5rem;
+            cursor: pointer;
         }
         .nav-brand span { color: var(--accent); }
         .nav-links { display: flex; gap: 2rem; list-style: none; }
@@ -55,7 +56,7 @@
             color: var(--text-secondary); text-decoration: none;
             font-size: 0.85rem; font-weight: 400; letter-spacing: 0.01em;
             transition: color 0.3s;
-            position: relative;
+            position: relative; cursor: pointer;
         }
         .nav-links a::after {
             content: ''; position: absolute; bottom: -4px; left: 0;
@@ -73,11 +74,22 @@
             margin: 5px 0; transition: var(--transition);
         }
 
+        /* === PAGES === */
+        .page {
+            display: none; min-height: 100vh; padding-top: 52px;
+            animation: pageIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .page.active { display: block; }
+        @keyframes pageIn {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         /* === HERO === */
         .hero {
-            min-height: 100vh; display: flex; flex-direction: column;
+            min-height: calc(100vh - 52px); display: flex; flex-direction: column;
             align-items: center; justify-content: center; text-align: center;
-            padding: 8rem 2rem 4rem; position: relative; overflow: hidden;
+            padding: 4rem 2rem; position: relative; overflow: hidden;
         }
         .hero::before {
             content: ''; position: absolute; top: -50%; left: 50%; transform: translateX(-50%);
@@ -147,40 +159,6 @@
         .section-subtitle {
             font-size: 1.1rem; color: var(--text-secondary); max-width: 600px;
             line-height: 1.6; margin-bottom: 3rem;
-        }
-
-        /* === TABS === */
-        .tabs-container {
-            position: sticky; top: 52px; z-index: 100;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: saturate(180%) blur(20px);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            border-bottom: 1px solid var(--border);
-        }
-        .tabs {
-            max-width: 1100px; margin: 0 auto;
-            display: flex; gap: 0; padding: 0 2rem;
-        }
-        .tab-btn {
-            background: none; border: none; color: var(--text-secondary);
-            font-size: 0.9rem; font-weight: 500; padding: 1rem 1.5rem;
-            cursor: pointer; position: relative; transition: color 0.3s;
-            font-family: inherit; letter-spacing: -0.01em;
-        }
-        .tab-btn::after {
-            content: ''; position: absolute; bottom: 0; left: 1rem; right: 1rem;
-            height: 2px; background: var(--accent);
-            transform: scaleX(0); transition: transform 0.3s ease;
-        }
-        .tab-btn:hover { color: var(--text-primary); }
-        .tab-btn.active { color: var(--text-primary); }
-        .tab-btn.active::after { transform: scaleX(1); }
-
-        .tab-content { display: none; animation: fadeInTab 0.5s ease; }
-        .tab-content.active { display: block; }
-        @keyframes fadeInTab {
-            from { opacity: 0; transform: translateY(16px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         /* === STATS BAR === */
@@ -407,8 +385,6 @@
             .process-steps { grid-template-columns: 1fr; gap: 0.5rem; }
             .process-step::before, .process-step::after { display: none; }
             .ps-block { flex-direction: column; }
-            .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-            .tab-btn { white-space: nowrap; padding: 1rem; font-size: 0.82rem; }
         }
     </style>
 </head>
@@ -417,12 +393,12 @@
 <!-- NAV -->
 <nav>
     <div class="nav-inner">
-        <div class="nav-brand"><span>25667</span> Leviathan Robotics</div>
+        <div class="nav-brand" data-page="home"><span>25667</span> Leviathan Robotics</div>
         <ul class="nav-links" id="navLinks">
-            <li><a href="#home" class="active">Home</a></li>
-            <li><a href="#hardware">Hardware</a></li>
-            <li><a href="#software">Software</a></li>
-            <li><a href="#outreach">Outreach</a></li>
+            <li><a data-page="home" class="active">Home</a></li>
+            <li><a data-page="hardware">Hardware</a></li>
+            <li><a data-page="software">Software</a></li>
+            <li><a data-page="outreach">Outreach</a></li>
         </ul>
         <button class="hamburger" id="hamburger" aria-label="Toggle menu">
             <span></span><span></span><span></span>
@@ -430,68 +406,68 @@
     </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero" id="home">
-    <div class="hero-badge">FTC Team 25667 &mdash; Sandshrew Regionals</div>
-    <h1>Leviathan<br>Robotics</h1>
-    <p>Inspiring innovation, teamwork, and a passion for STEM through the challenges of robotics. Built with precision. Driven by purpose.</p>
-    <div class="hero-robot">
-        <img src="images/page16_img2.jpg" alt="Sandshrew Robot CAD render">
-    </div>
-</section>
+<!-- ==================== HOME PAGE ==================== -->
+<div class="page active" id="page-home">
 
-<!-- ABOUT / STATS -->
-<section id="about">
-    <div class="section-inner">
-        <div class="reveal">
-            <div class="section-label">About Us</div>
-            <div class="section-title">Engineering the future,<br>one build at a time.</div>
-            <div class="section-subtitle">We strive to design creative solutions, learn from every success and setback, and uphold the values of Gracious Professionalism. Our core values are teamwork and innovation.</div>
-        </div>
-
-        <div class="stats-bar reveal">
-            <div class="stat reveal-delay-1">
-                <div class="stat-number">7</div>
-                <div class="stat-label">Team Members</div>
-            </div>
-            <div class="stat reveal-delay-2">
-                <div class="stat-number">7</div>
-                <div class="stat-label">Sponsors</div>
-            </div>
-            <div class="stat reveal-delay-3">
-                <div class="stat-number">810+</div>
-                <div class="stat-label">People Reached</div>
-            </div>
-            <div class="stat reveal-delay-4">
-                <div class="stat-number">3</div>
-                <div class="stat-label">Robot Versions</div>
-            </div>
-        </div>
-
-        <div class="team-photo reveal">
-            <img src="images/page2_img2.jpg" alt="Team photo of Leviathan Robotics members">
-        </div>
-
-        <div class="sponsors-grid reveal">
-            <img src="images/page1_img9.jpg" alt="Apple" class="sponsor-logo">
-            <img src="images/page1_img8.jpg" alt="Meta" class="sponsor-logo">
-            <img src="images/page1_img4.jpg" alt="ServiceNow" class="sponsor-logo">
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-badge">FTC Team 25667 &mdash; Sandshrew Regionals</div>
+        <h1>Leviathan<br>Robotics</h1>
+        <p>Inspiring innovation, teamwork, and a passion for STEM through the challenges of robotics. Built with precision. Driven by purpose.</p>
+        <div class="hero-robot">
+            <img src="images/page16_img2.jpg" alt="Sandshrew Robot CAD render">
         </div>
     </div>
-</section>
 
-<!-- TABS BAR -->
-<div class="tabs-container" id="tabsBar">
-    <div class="tabs">
-        <button class="tab-btn active" data-tab="hardware">Hardware</button>
-        <button class="tab-btn" data-tab="software">Software</button>
-        <button class="tab-btn" data-tab="outreach">Outreach</button>
-    </div>
+    <!-- ABOUT / STATS -->
+    <section>
+        <div class="section-inner">
+            <div class="reveal">
+                <div class="section-label">About Us</div>
+                <div class="section-title">Engineering the future,<br>one build at a time.</div>
+                <div class="section-subtitle">We strive to design creative solutions, learn from every success and setback, and uphold the values of Gracious Professionalism. Our core values are teamwork and innovation.</div>
+            </div>
+
+            <div class="stats-bar reveal">
+                <div class="stat reveal-delay-1">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">Team Members</div>
+                </div>
+                <div class="stat reveal-delay-2">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">Sponsors</div>
+                </div>
+                <div class="stat reveal-delay-3">
+                    <div class="stat-number">45k+</div>
+                    <div class="stat-label">People Reached</div>
+                </div>
+                <div class="stat reveal-delay-4">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">Robot Versions</div>
+                </div>
+            </div>
+
+            <div class="team-photo reveal">
+                <img src="images/page2_img2.jpg" alt="Team photo of Leviathan Robotics members">
+            </div>
+
+            <div class="sponsors-grid reveal">
+                <img src="images/page1_img9.jpg" alt="Apple" class="sponsor-logo">
+                <img src="images/page1_img8.jpg" alt="Meta" class="sponsor-logo">
+                <img src="images/page1_img4.jpg" alt="ServiceNow" class="sponsor-logo">
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
+        <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
+    </footer>
 </div>
 
-<!-- HARDWARE TAB -->
-<section id="hardware">
-    <div class="tab-content active" data-tab-content="hardware">
+<!-- ==================== HARDWARE PAGE ==================== -->
+<div class="page" id="page-hardware">
+    <section>
         <div class="section-inner">
 
             <!-- Design Process -->
@@ -708,12 +684,17 @@
             </div>
 
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- SOFTWARE TAB -->
-<section id="software">
-    <div class="tab-content" data-tab-content="software">
+    <footer>
+        <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
+        <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
+    </footer>
+</div>
+
+<!-- ==================== SOFTWARE PAGE ==================== -->
+<div class="page" id="page-software">
+    <section>
         <div class="section-inner">
             <div class="reveal">
                 <div class="section-label">Software</div>
@@ -802,12 +783,17 @@
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- OUTREACH TAB -->
-<section id="outreach">
-    <div class="tab-content" data-tab-content="outreach">
+    <footer>
+        <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
+        <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
+    </footer>
+</div>
+
+<!-- ==================== OUTREACH PAGE ==================== -->
+<div class="page" id="page-outreach">
+    <section>
         <div class="section-inner">
             <div class="reveal">
                 <div class="section-label">Community Impact</div>
@@ -817,7 +803,7 @@
 
             <div class="stats-bar reveal">
                 <div class="stat">
-                    <div class="stat-number">810+</div>
+                    <div class="stat-number">45k+</div>
                     <div class="stat-label">Total People Reached</div>
                 </div>
                 <div class="stat">
@@ -947,16 +933,52 @@
             </div>
 
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- FOOTER -->
-<footer>
-    <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
-    <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
-</footer>
+    <footer>
+        <p><strong style="color: var(--text-primary);">Leviathan Robotics</strong> &mdash; FTC Team 25667</p>
+        <p style="margin-top: 0.5rem;">Inspiring innovation through STEM &bull; Gracious Professionalism</p>
+    </footer>
+</div>
 
 <script>
+    // Page navigation
+    function showPage(pageName) {
+        // Hide all pages
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+        // Show target page
+        const target = document.getElementById('page-' + pageName);
+        if (target) {
+            target.classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+
+            // Re-trigger reveal animations
+            target.querySelectorAll('.reveal').forEach(el => {
+                el.classList.remove('visible');
+                void el.offsetWidth;
+                observer.observe(el);
+            });
+        }
+
+        // Update nav active state
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            a.classList.toggle('active', a.dataset.page === pageName);
+        });
+
+        // Close mobile menu
+        hamburger.classList.remove('open');
+        navLinks.classList.remove('open');
+    }
+
+    // Nav link clicks
+    document.querySelectorAll('[data-page]').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            showPage(el.dataset.page);
+        });
+    });
+
     // Hamburger toggle
     const hamburger = document.getElementById('hamburger');
     const navLinks = document.getElementById('navLinks');
@@ -964,61 +986,6 @@
         hamburger.classList.toggle('open');
         navLinks.classList.toggle('open');
     });
-
-    // Close mobile nav on link click
-    navLinks.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-            hamburger.classList.remove('open');
-            navLinks.classList.remove('open');
-        });
-    });
-
-    // Tabs
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
-
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.tab;
-
-            tabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            tabContents.forEach(tc => {
-                tc.classList.remove('active');
-                if (tc.dataset.tabContent === target) {
-                    tc.classList.add('active');
-                    // Re-trigger reveal animations inside the newly active tab
-                    tc.querySelectorAll('.reveal').forEach(el => {
-                        el.classList.remove('visible');
-                        void el.offsetWidth; // force reflow
-                        observeElement(el);
-                    });
-                }
-            });
-
-            // Scroll to the tab section
-            const sectionId = target === 'hardware' ? 'hardware' : target === 'software' ? 'software' : 'outreach';
-            document.getElementById(sectionId).scrollIntoView({ behavior: 'smooth', block: 'start' });
-        });
-    });
-
-    // Nav active link highlighting
-    const navAnchors = document.querySelectorAll('.nav-links a');
-    const sections = document.querySelectorAll('section[id]');
-
-    function updateActiveNav() {
-        let current = '';
-        sections.forEach(section => {
-            const sectionTop = section.offsetTop - 120;
-            if (scrollY >= sectionTop) current = section.getAttribute('id');
-        });
-        navAnchors.forEach(a => {
-            a.classList.remove('active');
-            if (a.getAttribute('href') === '#' + current) a.classList.add('active');
-        });
-    }
-    window.addEventListener('scroll', updateActiveNav);
 
     // Scroll reveal (Intersection Observer)
     const observer = new IntersectionObserver((entries) => {
@@ -1029,33 +996,7 @@
         });
     }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
 
-    function observeElement(el) {
-        observer.observe(el);
-    }
-
-    document.querySelectorAll('.reveal').forEach(el => observeElement(el));
-
-    // Sync tabs with scroll position
-    function updateActiveTabs() {
-        const hw = document.getElementById('hardware');
-        const sw = document.getElementById('software');
-        const or = document.getElementById('outreach');
-        const scrollPos = window.scrollY + 160;
-
-        let activeTab = 'hardware';
-        if (or && scrollPos >= or.offsetTop) activeTab = 'outreach';
-        else if (sw && scrollPos >= sw.offsetTop) activeTab = 'software';
-
-        tabBtns.forEach(b => {
-            b.classList.toggle('active', b.dataset.tab === activeTab);
-        });
-
-        // Show the correct tab content
-        tabContents.forEach(tc => {
-            tc.classList.toggle('active', tc.dataset.tabContent === activeTab);
-        });
-    }
-    window.addEventListener('scroll', updateActiveTabs);
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 </script>
 
 </body>
